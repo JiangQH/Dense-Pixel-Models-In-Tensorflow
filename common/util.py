@@ -1,4 +1,5 @@
 import tensorflow as tf
+import yaml
 
 def preprocess(image_tensor, label_tensor, config):
     # resize and cast
@@ -13,3 +14,15 @@ def preprocess(image_tensor, label_tensor, config):
     sutracted = image_tensor - config.mean
 
     return image_tensor, label_tensor
+
+
+class Config(object):
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
+
+def load_config(conf_file):
+    with open(conf_file) as f:
+        config = Config(**yaml.load(f))
+
+    return config
+
