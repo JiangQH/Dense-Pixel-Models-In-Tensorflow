@@ -22,4 +22,4 @@ def incode_csv(image_dir, label_dir, out_name):
     print 'saving done! as {}'.format(out_name)
 
 
-incode_csv('/home/jqh/workdir/project/segnet_depth/data/rgb', '/home/jqh/workdir/project/segnet_depth/data/normal_map', 'train.csv')
+incode_csv('/home/qinhong/project/semantic-segmentation-proposals/data/rgb', '/home/qinhong/project/semantic-segmentation-proposals/data/normal_map', 'train.csv')

@@ -1,4 +1,6 @@
 import tensorflow as tf
+from tensorflow.python.ops import gen_nn_ops
+from tensorflow.python.framework import ops
 
 def _get_variable(name, shape, initializer):
     var = tf.get_variable(name, shape, initializer=initializer)
@@ -72,15 +74,33 @@ def max_pool_with_mask(inputs, kernel, stride, padding='SAME'):
 
 def unpool(inputs, mask, upratio=2):
     batch, height, width, channel = inputs.get_shape().as_list()
-    out_shape = tf.stack([batch, height * upratio, width * upratio, channel])
+    out_shape = (batch, height*upratio, width*upratio, channel)
 
-    # update according the location
-    out_values = tf.zeros(tf.reduce_prod(out_shape))
-    input_flatten = tf.reshape(inputs, tf.reduce_prod(tf.shape(inputs)))
-    out_values = tf.scatter_update(out_values, mask, input_flatten)
+    ones = tf.ones_like(mask)
+    batch_range = tf.reshape(tf.range(batch, dtype=tf.int64), shape=[batch, 1, 1, 1])
+    b = ones * batch_range
+    y = mask // (out_shape[2] * out_shape[3])
+    x = mask % (out_shape[2] * out_shape[3]) // out_shape[3]
+    c = tf.range(channel, dtype=tf.int64)
 
-    # reshape back and return
-    out = tf.reshape(out_values, out_shape)
+    f = ones * c
+
+    input_size = tf.size(inputs)
+    indexs = tf.transpose(tf.reshape(tf.stack([b, y, x, f]), [4, input_size]))
+    values = tf.reshape(inputs, [input_size])
+    out = tf.scatter_nd(indexs, values, out_shape)
+
     return out
+
+
+
+@ops.RegisterGradient("MaxPoolWithArgmax")
+def _MaxPoolGradWithArgmax(op, grad, unused_argmax_grad):
+    return gen_nn_ops._max_pool_grad_with_argmax(op.inputs[0],
+                                                 grad,
+                                                 op.outputs[1],
+                                                 op.get_attr("ksize"),
+                                                 op.get_attr("strides"),
+                                                 padding=op.get_attr("padding"))
 
 

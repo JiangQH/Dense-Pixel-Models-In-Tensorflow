@@ -48,6 +48,6 @@ def inference(images, phase):
     up1 = unpool(up2a, mask1)
     up1b = convs('up1', up1, 64, 64, phase)
     out = conv2d(name='out', inputs=up1b, input_channels=64,
-                 output_channels=3, kernel=3, stride=2)
+                 output_channels=3, kernel=3, stride=1)
     return out
 
