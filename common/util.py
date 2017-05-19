@@ -11,7 +11,8 @@ def preprocess(image_tensor, label_tensor, config):
         label_tensor = tf.subtract(tf.divide(tf.multiply(label_tensor, [2.0]), [255.0]), [1.0])
 
     # subtrac mean if need
-    sutracted = image_tensor - config.mean
+    if config.mean:
+        image_tensor = image_tensor - config.mean
 
     return image_tensor, label_tensor
 

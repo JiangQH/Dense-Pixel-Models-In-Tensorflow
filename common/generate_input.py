@@ -20,3 +20,6 @@ def incode_csv(image_dir, label_dir, out_name):
             f.write("\n")
         f.close()
     print 'saving done! as {}'.format(out_name)
+
+
+incode_csv('/home/jqh/workdir/project/segnet_depth/data/rgb', '/home/jqh/workdir/project/segnet_depth/data/normal_map', 'train.csv')

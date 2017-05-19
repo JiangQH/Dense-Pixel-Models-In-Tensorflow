@@ -29,7 +29,7 @@ def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
         return conv
 
 
-def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=2,
+def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=1,
           bias_var=0.01, wd=0.0, stddev=0.01):
     conv = conv2d(name, inputs, input_channels, output_channels, kernel,
                   stride, bias_var, wd, stddev)

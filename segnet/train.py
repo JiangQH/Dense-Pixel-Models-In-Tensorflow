@@ -28,7 +28,7 @@ def solve(config):
         sess_config.gpu_options.allow_growth = True
 
         with tf.Session(config=sess_config) as sess:
-            ckpt = tf.train.get_checkpoint_state(config.ckpt_dir)
+            ckpt = tf.train.get_checkpoint_state(config.model_dir)
             if not ckpt:
                 print 'no pre training model, init from first...'
                 sess.run(init)
@@ -63,7 +63,7 @@ def solve(config):
 
 def main(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--conf', help='path to the config file')
+    parser.add_argument('-c', '--conf', required=True, help='path to the config file')
     args = parser.parse_args()
     config = load_config(args.conf)
     solve(config)
