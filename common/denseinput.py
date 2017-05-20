@@ -1,5 +1,7 @@
 import tensorflow as tf
 from util import preprocess
+
+
 class DenseInput(object):
     """
     a dense data layer. input is image, and pixel map
@@ -26,15 +28,16 @@ class DenseInput(object):
         rgb_name, label_name = tf.decode_csv(serialized, [["path"], ["annotation"]])
         # read the image in
         img_file = tf.read_file(rgb_name)
-        image = tf.image.decode_jpeg(img_file, channels=3)
+        image = tf.image.decode_png(img_file, channels=3)
         # read the label in
         label_file = tf.read_file(label_name)
         label = tf.image.decode_png(label_file, channels=self.config.label_channel)
         # preprocess
         image, label = preprocess(image, label, self.config)
         # get the invalid_mask
-        invalid_mask = tf.equal(label, [0, 0, 0])
+        # invalid_mask = tf.equal(label, [0, 0, 0])
+        mask = tf.not_equal(label, [0, 0, 0])
 
-        return image, label, invalid_mask
+        return image, label, mask
 
 

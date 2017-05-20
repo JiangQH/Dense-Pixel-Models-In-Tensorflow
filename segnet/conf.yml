@@ -7,7 +7,7 @@ phase: True
 batch_size: 1  # batch_size
 label_channel: 3  #the label map channel
 image_size: 224  #the training image size
-mean: [123.68, 116.779, 103.939] # image mean to sub
+mean: [0, 0, 0] # image mean to sub
 lr: 0.001
 max_iter: 70000
 snapshot: 10000

@@ -72,6 +72,21 @@ def max_pool_with_mask(inputs, kernel, stride, padding='SAME'):
                                       [1, stride, stride, 1], padding=padding)
 
 
+def max_pool(inputs, kernel, stride, padding='SAME'):
+    return tf.nn.max_pool(inputs, [1, kernel, kernel, 1],
+                          [1, stride, stride, 1], padding=padding)
+
+def unpool_cpu(inputs):
+    shape = inputs.get_shape().as_list()
+    dim = len(shape[1:-1])
+    out = (tf.reshape(inputs, [-1] + shape[-dim:]))
+    for i in range(dim, 0, -1):
+        out = tf.concat(values=[out, tf.zeros_like(out)], axis=i)
+    out_size = [-1] + [s * 2 for s in shape[1:-1] + [shape[-1] / 2]]
+    out = tf.reshape(out, out_size)
+    return out
+
+
 def unpool(inputs, mask, upratio=2):
     batch, height, width, channel = inputs.get_shape().as_list()
     out_shape = (batch, height*upratio, width*upratio, channel)
@@ -89,7 +104,6 @@ def unpool(inputs, mask, upratio=2):
     indexs = tf.transpose(tf.reshape(tf.stack([b, y, x, f]), [4, input_size]))
     values = tf.reshape(inputs, [input_size])
     out = tf.scatter_nd(indexs, values, out_shape)
-
     return out
 
 

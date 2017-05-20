@@ -7,6 +7,7 @@ import time
 import numpy as np
 import os.path as osp
 import argparse
+import matplotlib.pyplot as plt
 
 def solve(config):
     with tf.Graph().as_default() as g:
@@ -43,12 +44,15 @@ def solve(config):
             start_time = time.time()
             local_time = time.time()
             for step in xrange(config.max_iter+1):
-                _, loss = sess.run([train_op, loss])
+                _, loss_val, rgbs, normals, masks = sess.run([train_op, loss, images, labels, invalid_masks])
                 if step % config.display == 0 or step == config.max_iter:
-                    print '{}[iterations], train loss {}, time consumes {}'.format(step, loss, time.time()-local_time)
+                    print '{}[iterations], train loss {}, time consumes {}'.format(step, loss_val, time.time()-local_time)
                     local_time = time.time()
-
-                assert not np.isnan(loss), 'model with loss nan'
+                plt.figure(1)
+                plt.imshow(np.uint8(rgbs[0, ...]))
+                plt.figure(2)
+                plt.imshow(np.uint8((normals[0, ...]/2 + 0.5) * 255))
+                assert not np.isnan(loss_val), 'model with loss nan'
 
                 if step != 0 and (step % config.snapshot == 0 or step == config.max_iter):
                     print 'saving snapshot...'
