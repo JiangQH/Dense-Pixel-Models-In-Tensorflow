@@ -14,7 +14,7 @@ def _weights_with_weight_decay(name, shape, wd, initializer):
     return var
 
 def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
-           bias_var=None, wd=0.0, initializer=tf.truncated_normal_initializer(stddev=0.01)):
+           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.01)):
     # get the weight
     with tf.variable_scope(name) as scope:
         weight_shape = [kernel, kernel, input_channels, output_channels]
@@ -32,14 +32,14 @@ def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
 
 
 def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=1,
-          bias_var=None, wd=0.0, initializer=tf.truncated_normal_initializer(stddev=0.01)):
+          bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.01)):
     conv = conv2d(name, inputs, input_channels, output_channels, kernel,
                   stride, bias_var, wd, initializer)
     bn = batchnorm(name+'_bn', conv, phase)
     return relu(bn)
 
 def deconv(name, inputs, input_channels, output_channels, kernel, stride,
-           bias_var=None, wd=0.0, initializer=tf.truncated_normal_initializer(stddev=0.01)):
+           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.01)):
     with tf.variable_scope(name):
         # get the weight
         weight_shape = [kernel, kernel, output_channels, input_channels]

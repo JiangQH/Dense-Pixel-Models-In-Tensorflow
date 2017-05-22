@@ -1,7 +1,5 @@
 import tensorflow as tf
 from util import preprocess
-
-
 class DenseInput(object):
     """
     a dense data layer. input is image, and pixel map
@@ -37,7 +35,6 @@ class DenseInput(object):
         # get the invalid_mask
         # invalid_mask = tf.equal(label, [0, 0, 0])
         mask = tf.not_equal(label, [0, 0, 0])
-
         return image, label, mask
 
 
