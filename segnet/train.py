@@ -13,11 +13,11 @@ import matplotlib.pyplot as plt
 def solve(config):
     with tf.Graph().as_default() as g:
         # construct the data pipline
-        images, labels, invalid_masks = DenseInput(config).densedata_pipelines()
+        images, labels, masks = DenseInput(config).densedata_pipelines()
         # infere the output
         predictions = Model(config.vgg_path).inference(images, config.phase)
         # the loss
-        loss = compute_euclidean_loss(predictions, labels, invalid_masks)
+        loss, labels_masked, images_masked, mask_nums = compute_euclidean_loss(predictions, labels, images, masks)
 
         # train op
         global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -46,14 +46,16 @@ def solve(config):
             start_time = time.time()
             local_time = time.time()
             for step in xrange(config.max_iter+1):
-                _, loss_val, rgbs, normals, masks, pre = sess.run([train_op, loss, images, labels, invalid_masks, predictions])
+                _, loss_val, normal_masked, rgb_masked, mask_num = sess.run([train_op, loss, labels_masked, images_masked, mask_nums])
                 if step % config.display == 0 or step == config.max_iter:
                     print '{}[iterations], train loss {}, time consumes {}'.format(step, loss_val, time.time()-local_time)
                     local_time = time.time()
-                #plt.figure(1)
-                #plt.imshow(np.uint8(rgbs[1, ...]))
-                #plt.figure(2)
-                #plt.imshow(np.uint8((normals[1, ...]/2 + 0.5) * 255))
+                plt.figure(1)
+                plt.imshow(np.uint8(rgb_masked[0, ...]))
+                plt.figure(2)
+                plt.imshow(np.uint8((normal_masked[0, ...]/2 + 0.5) * 255))
+                plt.figure(3)
+                plt.imshow(np.uint8(mask_num[0,...]))
                 assert not np.isnan(loss_val), 'model with loss nan'
 
                 if step != 0 and (step % config.snapshot == 0 or step == config.max_iter):

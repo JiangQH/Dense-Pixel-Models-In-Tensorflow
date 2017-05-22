@@ -31,10 +31,9 @@ class DenseInput(object):
         label_file = tf.read_file(label_name)
         label = tf.image.decode_png(label_file, channels=self.config.label_channel)
         # preprocess
-        image, label = preprocess(image, label, self.config)
+        image, label, mask = preprocess(image, label, self.config)
         # get the invalid_mask
         # invalid_mask = tf.equal(label, [0, 0, 0])
-        mask = tf.not_equal(label, [0, 0, 0])
         return image, label, mask
 
 
