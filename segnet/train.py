@@ -1,4 +1,4 @@
-from model import inference
+from model import Model
 from common.denseinput import DenseInput
 from loss import compute_euclidean_loss
 from common.util import load_config
@@ -14,7 +14,7 @@ def solve(config):
         # construct the data pipline
         images, labels, invalid_masks = DenseInput(config).densedata_pipelines()
         # infere the output
-        predictions = inference(images, config.phase)
+        predictions = Model(config.vgg_path).inference(images, config.phase)
         # the loss
         loss = compute_euclidean_loss(predictions, labels, invalid_masks)
 
@@ -36,7 +36,8 @@ def solve(config):
             else:
                 ckpt_path = ckpt.model_checkpoint_path
                 saver.restore(sess, ckpt_path)
-
+            #for var in tf.global_variables():
+            #    print var
             # begin training
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess, coord)
@@ -44,14 +45,14 @@ def solve(config):
             start_time = time.time()
             local_time = time.time()
             for step in xrange(config.max_iter+1):
-                _, loss_val, rgbs, normals, masks = sess.run([train_op, loss, images, labels, invalid_masks])
+                _, loss_val, rgbs, normals, masks, pre = sess.run([train_op, loss, images, labels, invalid_masks, predictions])
                 if step % config.display == 0 or step == config.max_iter:
                     print '{}[iterations], train loss {}, time consumes {}'.format(step, loss_val, time.time()-local_time)
                     local_time = time.time()
                 plt.figure(1)
-                plt.imshow(np.uint8(rgbs[0, ...]))
+                plt.imshow(np.uint8(rgbs[1, ...]))
                 plt.figure(2)
-                plt.imshow(np.uint8((normals[0, ...]/2 + 0.5) * 255))
+                plt.imshow(np.uint8((normals[1, ...]/2 + 0.5) * 255))
                 assert not np.isnan(loss_val), 'model with loss nan'
 
                 if step != 0 and (step % config.snapshot == 0 or step == config.max_iter):
