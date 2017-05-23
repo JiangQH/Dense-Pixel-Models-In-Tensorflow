@@ -3,13 +3,19 @@ source: ./train.csv  # training file
 model_dir: ./model
 vgg_path: ./VGG_ILSVRC_16_layers.npy
 
-phase: True
+# training params
 batch_size: 1  # batch_size
+lr: 0.001
+max_iter: 70000
+#momentum: 0.9
+#stepsize: 50
+#gamma: 0.1
+snapshot: 10000
+
+
+phase: True
 label_channel: 3  #the label map channel
 image_size: 224  #the training image size
 mean: [0, 0, 0] # image mean to sub
-lr: 0.001
-max_iter: 70000
-snapshot: 10000
 display: 1
 finetune: False

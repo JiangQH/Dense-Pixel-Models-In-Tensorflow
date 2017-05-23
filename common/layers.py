@@ -76,6 +76,22 @@ def max_pool(inputs, kernel, stride, padding='SAME'):
     return tf.nn.max_pool(inputs, [1, kernel, kernel, 1],
                           [1, stride, stride, 1], padding=padding)
 
+def norm(inputs):
+    """
+    norm the inputs to [-1, 1] by channel
+    :param inputs:
+    :return:
+    """
+    shapes = inputs.get_shape().as_list()
+    x, y, z = tf.split(inputs, 3, axis=len(shapes)-1)
+    square_sum = tf.add(tf.square(x), tf.square(y))
+    square_sum = tf.add(square_sum, tf.square(z))
+    eps = 1e-9
+    x_norm = tf.divide(x, tf.sqrt(tf.add(square_sum, eps)))
+    y_norm = tf.divide(y, tf.sqrt(tf.add(square_sum, eps)))
+    z_norm = tf.divide(z, tf.sqrt(tf.add(square_sum, eps)))
+    return tf.concat([x_norm, y_norm, z_norm], axis=len(shapes)-1)
+
 def unpool_cpu(inputs):
     shape = inputs.get_shape().as_list()
     dim = len(shape[1:-1])

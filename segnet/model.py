@@ -1,4 +1,4 @@
-from common.layers import convs, max_pool_with_mask, unpool, conv2d, max_pool, unpool_cpu
+from common.layers import convs, max_pool_with_mask, unpool, conv2d, max_pool, unpool_cpu, norm
 import numpy as np
 import tensorflow as tf
 class Model(object):
@@ -85,31 +85,32 @@ class Model(object):
         # the decoder part, unpool and conv
         up5 = unpool(pool5, mask5)
         # up5 = unpool_cpu(pool5)
-        up5c = convs('up5c', up5, 512, 512, phase, bias_var=0.01)
-        up5b = convs('up5b', up5c, 512, 512, phase, bias_var=0.01)
-        up5a = convs('up5a', up5b, 512, 512, phase, bias_var=0.01)
+        up5c = convs('up5c', up5, 512, 512, phase, bias_var=0.1)
+        up5b = convs('up5b', up5c, 512, 512, phase, bias_var=0.1)
+        up5a = convs('up5a', up5b, 512, 512, phase, bias_var=0.1)
 
         up4 = unpool(up5a, mask4)
         # up4 = unpool_cpu(up5a)
-        up4c = convs('up4c', up4, 512, 512, phase, bias_var=0.01)
-        up4b = convs('up4b', up4c, 512, 512, phase, bias_var=0.01)
-        up4a = convs('up4a', up4b, 512, 256, phase, bias_var=0.01)
+        up4c = convs('up4c', up4, 512, 512, phase, bias_var=0.1)
+        up4b = convs('up4b', up4c, 512, 512, phase, bias_var=0.1)
+        up4a = convs('up4a', up4b, 512, 256, phase, bias_var=0.1)
 
         up3 = unpool(up4a, mask3)
         # up3 = unpool_cpu(up4a)
-        up3c = convs('up3c', up3, 256, 256, phase, bias_var=0.01)
-        up3b = convs('up3b', up3c, 256, 256, phase, bias_var=0.01)
-        up3a = convs('up3a', up3b, 256, 128, phase, bias_var=0.01)
+        up3c = convs('up3c', up3, 256, 256, phase, bias_var=0.1)
+        up3b = convs('up3b', up3c, 256, 256, phase, bias_var=0.1)
+        up3a = convs('up3a', up3b, 256, 128, phase, bias_var=0.1)
 
         up2 = unpool(up3a, mask2)
         # up2 = unpool_cpu(up3a)
-        up2b = convs('up2b', up2, 128, 128, phase, bias_var=0.01)
-        up2a = convs('up2a', up2b, 128, 64, phase, bias_var=0.01)
+        up2b = convs('up2b', up2, 128, 128, phase, bias_var=0.1)
+        up2a = convs('up2a', up2b, 128, 64, phase, bias_var=0.1)
 
         up1 = unpool(up2a, mask1)
         # up1 = unpool_cpu(up2a)
-        up1b = convs('up1', up1, 64, 64, phase, bias_var=0.01)
+        up1b = convs('up1', up1, 64, 64, phase, bias_var=0.1)
         out = conv2d(name='out', inputs=up1b, input_channels=64,
                      output_channels=3, kernel=3, stride=1)
-        return out
+        out_norm = norm(out)
+        return out_norm
 

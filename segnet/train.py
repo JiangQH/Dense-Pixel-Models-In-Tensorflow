@@ -21,8 +21,14 @@ def solve(config):
         # the loss
         loss = compute_euclidean_loss(predictions, labels, masks)
 
-        # train op
+        # train op, use the sgd with momentum
         global_step = tf.Variable(0, name='global_step', trainable=False)
+        #learning_rate = tf.train.exponential_decay(learning_rate=config.lr,
+        #                                           global_step=global_step, decay_steps=config.stepsize,
+        #                                           decay_rate=config.gamma)
+        #train_op = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=config.momentum).minimize(
+        #    loss, global_step=global_step
+        #)
         train_op = tf.train.AdamOptimizer(learning_rate=config.lr).minimize(loss, global_step=global_step)
 
         # the saver to load params of pretrained model
@@ -42,6 +48,8 @@ def solve(config):
             #for var in tf.global_variables():
             #    print var
             # begin training
+            for var in tf.trainable_variables():
+                print var
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess, coord)
             print 'begin training now....'
