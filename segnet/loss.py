@@ -17,4 +17,9 @@ def compute_euclidean_loss(pre, gt, mask):
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-
+def compute_dot_loss(pre, gt, mask):
+    dots = tf.reduce_sum(tf.multiply(pre, gt))
+    total_count = tf.reduce_sum(mask)
+    loss = tf.multiply(tf.divide(dots, total_count), -1)
+    tf.add_to_collection('losses', loss)
+    return tf.add_n(tf.get_collection('losses'), name='total_loss')

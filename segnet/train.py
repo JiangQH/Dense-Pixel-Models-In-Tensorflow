@@ -5,7 +5,7 @@ path = osp.dirname(parent_dir)
 sys.path.append(path)
 from model import Model
 from common.denseinput import DenseInput
-from loss import compute_euclidean_loss
+from loss import compute_euclidean_loss, compute_dot_loss
 from common.util import load_config
 import tensorflow as tf
 import time
@@ -17,10 +17,10 @@ def solve(config):
         # construct the data pipline
         images, labels, masks = DenseInput(config).densedata_pipelines()
         # infere the output
-        predictions = Model(config.vgg_path).inference(images, config.phase)
+        predictions = Model(config).inference(images)
         # the loss
-        loss = compute_euclidean_loss(predictions, labels, masks)
-
+        #loss = compute_euclidean_loss(predictions, labels, masks)
+        loss = compute_dot_loss(predictions, labels, masks)
         # train op, use the sgd with momentum
         global_step = tf.Variable(0, name='global_step', trainable=False)
         #learning_rate = tf.train.exponential_decay(learning_rate=config.lr,
@@ -48,15 +48,15 @@ def solve(config):
             #for var in tf.global_variables():
             #    print var
             # begin training
-            for var in tf.trainable_variables():
-                print var
+            #for var in tf.trainable_variables():
+            #    print var
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess, coord)
             print 'begin training now....'
             start_time = time.time()
             local_time = time.time()
             for step in xrange(config.max_iter+1):
-                _, loss_val = sess.run([train_op, loss])
+                _, loss_val, pre, gt = sess.run([train_op, loss, predictions, labels])
                 if step % config.display == 0 or step == config.max_iter:
                     print '{}[iterations], train loss {}, time consumes {}'.format(step,
                                                                                   loss_val,

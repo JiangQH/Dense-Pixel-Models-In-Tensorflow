@@ -5,12 +5,13 @@ vgg_path: ./VGG_ILSVRC_16_layers.npy
 
 # training params
 batch_size: 1  # batch_size
-lr: 0.001
+lr: 0.0001
 max_iter: 70000
 #momentum: 0.9
 #stepsize: 50
 #gamma: 0.1
 snapshot: 10000
+weight_decay: 0.0005
 
 
 phase: True
