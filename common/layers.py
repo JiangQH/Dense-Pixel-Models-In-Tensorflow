@@ -3,7 +3,7 @@ from tensorflow.python.ops import gen_nn_ops
 from tensorflow.python.framework import ops
 
 def _get_variable(name, shape, initializer):
-    var = tf.get_variable(name, shape, initializer=initializer)
+    var = tf.get_variable(name, shape, initializer=initializer, dtype=tf.float32)
     return var
 
 def _weights_with_weight_decay(name, shape, wd, initializer):
@@ -17,7 +17,10 @@ def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
            bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
     # get the weight
     with tf.variable_scope(name) as scope:
-        weight_shape = [kernel, kernel, input_channels, output_channels]
+        if type(kernel) is list:
+            weight_shape = kernel + [input_channels, output_channels]
+        else:
+            weight_shape = [kernel, kernel, input_channels, output_channels]
         weight = _weights_with_weight_decay('w_' + name, shape=weight_shape,
                                             wd=wd, initializer=initializer)
         # do the convolution job
@@ -30,6 +33,22 @@ def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
 
         return conv
 
+def dilated_conv(name, inputs, input_channels, output_channels, kernel, dilated_rate,
+           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
+    with tf.variable_scope(name) as scope:
+        if type(kernel) is list:
+            weight_shape = kernel + [input_channels, output_channels]
+        else:
+            weight_shape = [kernel, kernel, input_channels, output_channels]
+        weight = _weights_with_weight_decay('w_'+name, weight_shape, wd, initializer)
+
+        # do the dilation job
+        conv = tf.nn.atrous_conv2d(inputs, weight, rate=dilated_rate, padding='SAME')
+        if bias_var is not None:
+            bias_shape = [output_channels]
+            bias = _get_variable('b_' + name, bias_shape, tf.constant_initializer(bias_var))
+            conv = tf.nn.bias_add(conv, bias)
+        return conv
 
 def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=1,
           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
@@ -56,12 +75,13 @@ def deconv(name, inputs, input_channels, output_channels, kernel, stride,
 
         return conv
 
-def batchnorm(name, inputs, phase):
+def batchnorm(name, inputs, is_training=True, decay=0.9):
     with tf.variable_scope(name):
         out = tf.contrib.layers.batch_norm(inputs,
                                            center=True,
                                            scale=True,
-                                           is_training=phase)
+                                           is_training=is_training,
+                                           decay=decay)
         return out
 
 def relu(inputs):
@@ -132,5 +152,14 @@ def _MaxPoolGradWithArgmax(op, grad, unused_argmax_grad):
                                                  op.get_attr("ksize"),
                                                  op.get_attr("strides"),
                                                  padding=op.get_attr("padding"))
+
+
+def prelu(name, inputs, alpha_init=0.0):
+    with tf.variable_scope(name) as scope:
+        alpha = _get_variable('alpha', inputs.get_shape()[-1], initializer=tf.constant_initializer(alpha_init))
+
+        return relu(inputs) + tf.multiply(alpha, (inputs - tf.abs(inputs))) * 0.5
+
+
 
 
