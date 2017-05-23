@@ -1,3 +1,8 @@
+import sys, os
+import os.path as osp
+parent_dir = os.getcwd()
+path = osp.dirname(parent_dir)
+sys.path.append(path)
 from model import Model
 from common.denseinput import DenseInput
 from loss import compute_euclidean_loss
@@ -5,10 +10,7 @@ from common.util import load_config
 import tensorflow as tf
 import time
 import numpy as np
-import os.path as osp
 import argparse
-
-import matplotlib.pyplot as plt
 
 def solve(config):
     with tf.Graph().as_default() as g:
@@ -17,7 +19,7 @@ def solve(config):
         # infere the output
         predictions = Model(config.vgg_path).inference(images, config.phase)
         # the loss
-        loss, labels_masked, images_masked, mask_nums = compute_euclidean_loss(predictions, labels, images, masks)
+        loss = compute_euclidean_loss(predictions, labels, masks)
 
         # train op
         global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -46,16 +48,18 @@ def solve(config):
             start_time = time.time()
             local_time = time.time()
             for step in xrange(config.max_iter+1):
-                _, loss_val, normal_masked, rgb_masked, mask_num = sess.run([train_op, loss, labels_masked, images_masked, mask_nums])
+                _, loss_val = sess.run([train_op, loss])
                 if step % config.display == 0 or step == config.max_iter:
-                    print '{}[iterations], train loss {}, time consumes {}'.format(step, loss_val, time.time()-local_time)
+                    print '{}[iterations], train loss {}, time consumes {}'.format(step,
+                                                                                  loss_val,
+                                                                                  time.time()-local_time)
                     local_time = time.time()
-                plt.figure(1)
-                plt.imshow(np.uint8(rgb_masked[0, ...]))
-                plt.figure(2)
-                plt.imshow(np.uint8((normal_masked[0, ...]/2 + 0.5) * 255))
-                plt.figure(3)
-                plt.imshow(np.uint8(mask_num[0,...]))
+                #plt.figure(1)
+                #plt.imshow(np.uint8(rgb_masked[0, ...]))
+                #plt.figure(2)
+                #plt.imshow(np.uint8((normal_masked[0, ...]/2 + 0.5) * 255))
+                #plt.figure(3)
+                #plt.imshow(np.uint8(mask_num[0,...]))
                 assert not np.isnan(loss_val), 'model with loss nan'
 
                 if step != 0 and (step % config.snapshot == 0 or step == config.max_iter):
