@@ -50,6 +50,27 @@ def dilated_conv(name, inputs, input_channels, output_channels, kernel, dilated_
             conv = tf.nn.bias_add(conv, bias)
         return conv
 
+def spatial_dropout(inputs, dropout_rate, is_training):
+    """
+    perform the spatial dropout to the whole feature map
+    dropout ration is only performed on the channel space
+    :param inputs:[batchs, height, width, channel]
+    :param dropout_rate: dropout ratio to the channel
+    :param is_training: do different job when is_training or not
+    :return:
+    """
+    # get a noise mask to do the dropout job, get the mask shape
+    if is_training:
+        channel_num = inputs.get_shape().as_list()[-1]
+        bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform(channel_num), dropout_rate))
+        # mask it to the whole channel feature map
+        output = tf.multiply(inputs, bernoulli_mask)
+        return output
+    else:
+        return tf.multiply(inputs, 1-dropout_rate)
+
+
+
 def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=1,
           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
     conv = conv2d(name, inputs, input_channels, output_channels, kernel,
