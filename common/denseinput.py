@@ -8,9 +8,10 @@ class DenseInput(object):
         self.batch_size = config.batch_size
         self.config = config
 
-    def densedata_pipelines(self):
+    def densedata_pipelines(self, is_training=True):
         # the name queue
-        filename_queues = tf.train.string_input_producer([self.config.source], shuffle=True)
+        file_source = self.config.source if is_training else self.config.val_source
+        filename_queues = tf.train.string_input_producer([file_source], shuffle=True)
         # read the data in
         image, label, invalid_mask = self._file_reader(filename_queues)
         # return batch

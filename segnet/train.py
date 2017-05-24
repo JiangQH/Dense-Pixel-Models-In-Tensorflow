@@ -1,11 +1,13 @@
-import sys, os
+import os
 import os.path as osp
+import sys
+
 parent_dir = os.getcwd()
 path = osp.dirname(parent_dir)
 sys.path.append(path)
 from model import Model
 from common.denseinput import DenseInput
-from loss import compute_euclidean_loss, compute_dot_loss
+from common.loss import compute_dot_loss
 from common.util import load_config
 import tensorflow as tf
 import time
