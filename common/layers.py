@@ -133,7 +133,7 @@ def norm(inputs):
     z_norm = tf.divide(z, tf.sqrt(tf.add(square_sum, eps)))
     return tf.concat([x_norm, y_norm, z_norm], axis=len(shapes)-1)
 
-def unpool_cpu(inputs):
+def unpool_without_mask(inputs):
     shape = inputs.get_shape().as_list()
     dim = len(shape[1:-1])
     out = (tf.reshape(inputs, [-1] + shape[-dim:]))
