@@ -14,15 +14,6 @@ import time
 import numpy as np
 import argparse
 
-def main(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--conf', required=True, help='path to the config file')
-    args = parser.parse_args()
-    config = load_config(args.conf)
-    solve(config)
-
-if __name__ == '__main__':
-    tf.app.run()
 
 def solve(config):
     with tf.Graph().as_default() as g:
@@ -84,3 +75,14 @@ def solve(config):
             print 'done, total time comsums {}'.format(time.time() - start_time)
 
             sess.close()
+
+
+def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--conf', required=True, help='path to the config file')
+    args = parser.parse_args()
+    config = load_config(args.conf)
+    solve(config)
+
+if __name__ == '__main__':
+    tf.app.run()

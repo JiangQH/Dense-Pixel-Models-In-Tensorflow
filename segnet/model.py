@@ -1,4 +1,4 @@
-from common.layers import convs, max_pool_with_mask, unpool, conv2d, max_pool, unpool_cpu, norm
+from common.layers import convs, max_pool_with_mask, unpool, conv2d, max_pool, norm
 import numpy as np
 import tensorflow as tf
 class Model(object):

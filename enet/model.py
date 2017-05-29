@@ -51,7 +51,7 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
             main_branch = conv2d(name+'_main_unit22', main_branch, internal_channels, internal_channels, [asy, 1],
                                  1, bias_var=None, wd=None)
         elif dilated:
-            main_branch = dilated_conv(name+'_main_unit2', main_branch, internal_channels, output_channels, 3,
+            main_branch = dilated_conv(name+'_main_unit2', main_branch, internal_channels, internal_channels, 3,
                                        dilated, bias_var=None, wd=None)
         else:
             raise Exception("Error for bottleneck {}".format(name))

@@ -1,0 +1,27 @@
+## config for training
+source: ./train.csv  # training file
+model_dir: ./model
+vgg_path: ./VGG_ILSVRC_16_layers.npy
+
+# training params
+batch_size: 1  # batch_size
+lr: 0.0001
+max_iter: 70000
+#momentum: 0.9
+#stepsize: 50
+#gamma: 0.1
+snapshot: 10000
+weight_decay: 0.0005
+train_decoder: True
+
+
+image_width: 480
+image_height: 360
+label_width: 60
+label_height: 45
+phase: True
+label_channel: 3  #the label map channel
+image_size: 224  #the training image size
+mean: [0, 0, 0] # image mean to sub
+display: 1
+finetune: False
