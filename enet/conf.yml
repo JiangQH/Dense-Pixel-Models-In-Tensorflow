@@ -5,14 +5,23 @@ vgg_path: ./VGG_ILSVRC_16_layers.npy
 
 # training params
 batch_size: 1  # batch_size
-lr: 0.0001
+lr: 5e-4
 max_iter: 70000
 #momentum: 0.9
 #stepsize: 50
 #gamma: 0.1
 snapshot: 10000
-weight_decay: 0.0005
-train_decoder: True
+weight_decay: 2e-4
+train_decoder: False
+label_probs: [0.36880975774750857, 0.060868740541025507, 0.22819570283385351,
+        0.0065592969591914581, 0.0087829592020800731, 0.012275657265534682,
+        0.0020849098115345898, 0.0055286245692937885, 0.15917384442191498,
+        0.011586649487463331, 0.040115148795081372, 0.012173028656789099,
+        0.0013485701801470244, 0.07001107820593705, 0.0026763435083572411,
+        0.002354059053386268, 0.0023301726794817553, 0.00098647045274468065,
+        0.0041389856286750248]
+invalid_label: 19
+c: 1.02
 
 
 image_width: 480
@@ -24,4 +33,3 @@ label_channel: 3  #the label map channel
 image_size: 224  #the training image size
 mean: [0, 0, 0] # image mean to sub
 display: 1
-finetune: False

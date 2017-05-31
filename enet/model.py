@@ -18,7 +18,7 @@ def _prelu_bn(name, inputs, is_training=True, alpha_init=0.0, decay=0.1):
 
 
 def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_scale=4, asy=0, dilated=0,
-                downsample=False, dropout_ratio=0.1, is_training=True, bn_decay=0.1):
+                downsample=False, dropout_ratio=0.1, is_training=True, bn_decay=0.1, wd=2e-4):
     """
     :param name: 
     :param inputs: 
@@ -37,29 +37,29 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
         # the 1 x 1 projection or 2 x 2 if downsampleing
         kernel_size = 2 if downsample else 1
         main_branch = conv2d(name+'_main_unit1', inputs, input_channels, internal_channels, kernel_size, kernel_size,
-                      bias_var=None, wd=0)
+                      bias_var=None, wd=wd)
         # the prelu_bn unit
         main_branch = _prelu_bn(name+'_main_unit1', main_branch, is_training, decay=bn_decay)
 
         # the conv unit according to the type
         if not asy and not dilated:
             main_branch = conv2d(name+'_main_unit2', main_branch, internal_channels, internal_channels, 3, 1,
-                                 bias_var=None, wd=0)
+                                 bias_var=None, wd=wd)
         elif asy:
             main_branch = conv2d(name+'_main_unit21', main_branch, internal_channels, internal_channels, [1, asy],
-                                 1, bias_var=None, wd=None)
+                                 1, bias_var=None, wd=wd)
             main_branch = conv2d(name+'_main_unit22', main_branch, internal_channels, internal_channels, [asy, 1],
-                                 1, bias_var=None, wd=None)
+                                 1, bias_var=None, wd=wd)
         elif dilated:
             main_branch = dilated_conv(name+'_main_unit2', main_branch, internal_channels, internal_channels, 3,
-                                       dilated, bias_var=None, wd=None)
+                                       dilated, bias_var=None, wd=wd)
         else:
             raise Exception("Error for bottleneck {}".format(name))
         main_branch = _prelu_bn(name+'_main_unit2', main_branch, is_training, decay=bn_decay)
 
         # the 1 x 1 to recover the ori channel num
         main_branch = conv2d(name+'_main_unit3', main_branch, internal_channels, output_channels, 1, 1,
-                             bias_var=None, wd=0)
+                             bias_var=None, wd=wd)
         main_branch = batchnorm(name+'_main_unit3_bn', main_branch, is_training, decay=bn_decay)
         # the regularizar, spatial dropout
         main_branch = spatial_dropout(main_branch, dropout_ratio, is_training)
@@ -81,13 +81,13 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
 
 
 def _bottleneck_decoder(name, inputs, input_channels, output_channels, internal_scale=4,
-                        upsample=False, reverse_module=False, is_training=True, bn_decay=0.1):
+                        upsample=False, reverse_module=False, is_training=True, bn_decay=0.1, wd=2e-4):
     with tf.variable_scope(name) as scope:
         internal_channels = output_channels / internal_scale
 
         # the main branch
         main_branch = conv2d(name+'_main_unit1', inputs, input_channels, internal_channels,
-                             1, 1, bias_var=None, wd=0)
+                             1, 1, bias_var=None, wd=wd)
         main_branch = batchnorm(name+'_main_unit1_bn', main_branch, is_training,
                                 decay=bn_decay)
         main_branch = relu(main_branch)
@@ -95,22 +95,22 @@ def _bottleneck_decoder(name, inputs, input_channels, output_channels, internal_
         # the second conv, decide by upsample or not
         if upsample:
             main_branch = deconv(name+'_main_unit2', main_branch, internal_channels,
-                                 internal_channels, 3, 2, bias_var=None, wd=0)
+                                 internal_channels, 3, 2, bias_var=None, wd=wd)
         else:
             main_branch = conv2d(name+'_main_unit2', main_branch, internal_channels,
-                                 internal_channels, 3, 1, bias_var=None, wd=0)
+                                 internal_channels, 3, 1, bias_var=None, wd=wd)
         main_branch = batchnorm(name+'_main_unit2_bn', main_branch, is_training,
                                 decay=bn_decay)
         main_branch = relu(main_branch)
         # the third branch
         main_branch = conv2d(name+'_main_unit3', main_branch, internal_channels, output_channels,
-                             1, 1, bias_var=None, wd=0)
+                             1, 1, bias_var=None, wd=wd)
 
         # the other branch
         other = inputs
         if input_channels != output_channels or upsample:
             other = conv2d(name+'_other_unit1', other, input_channels,
-                           output_channels, 1, 1, bias_var=None, wd=0)
+                           output_channels, 1, 1, bias_var=None, wd=wd)
             other = batchnorm(name+'_other_unit1_bn', other, is_training, decay=bn_decay)
             if upsample and reverse_module:
                 other = unpool_without_mask(other)
@@ -123,9 +123,9 @@ def _bottleneck_decoder(name, inputs, input_channels, output_channels, internal_
         out = tf.add(main_branch, other)
         return relu(out)
 
-def _initial_block(name, inputs, input_channels=3, output_channel=13, kerne=3, stride=2):
+def _initial_block(name, inputs, input_channels=3, output_channel=13, kerne=3, stride=2, wd=2e-4):
     conv = conv2d(name+'_conv_unit', inputs, input_channels, output_channel,
-                  kerne, stride, bias_var=None, wd=0)
+                  kerne, stride, bias_var=None, wd=wd)
     pool = max_pool(inputs, 2, 2)
     out = tf.concat([conv, pool], axis=3)
     return out
