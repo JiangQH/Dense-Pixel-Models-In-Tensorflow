@@ -17,12 +17,12 @@ import argparse
 def solve(config):
     with tf.Graph().as_default() as g:
         # construct the data pipline
-        images, labels, masks = DenseInput(config).densedata_pipelines()
+        images, labels = DenseInput(config).densedata_pipelines()
         # infere the output
         predictions = Model(config).inference(images)
         # the loss
         #loss = compute_euclidean_loss(predictions, labels, masks)
-        loss = compute_dot_loss(predictions, labels, masks)
+        loss = compute_dot_loss(predictions, labels)
         # train op, use the sgd with momentum
         global_step = tf.Variable(0, name='global_step', trainable=False)
         #learning_rate = tf.train.exponential_decay(learning_rate=config.lr,

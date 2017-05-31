@@ -43,16 +43,11 @@ def _weights_with_weight_decay(name, shape, wd, w_initializer):
     else:
         raise Exception('weight initializer must be str or number')
     """
-    # get the initializer
-    if isinstance(w_initializer, numbers.Number):
-        initializer = tf.truncated_normal_initializer(stddev=w_initializer)
-    elif w_initializer == 'xavier':
+    if w_initializer == 'xavier':
         stddev = _get_weights_stddev(shape, w_initializer)
-        initializer = tf.truncated_normal_initializer(stddev=stddev)
-    else:
-        raise Exception('weight initializer should be str or numbers')
+        w_initializer = tf.truncated_normal_initializer(stddev=stddev)
 
-    var = _get_variable(name, shape, initializer=initializer)
+    var = _get_variable(name, shape, initializer=w_initializer)
     if wd:
         weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_decay_loss')
         tf.add_to_collection('losses', weight_decay)

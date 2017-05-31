@@ -1,13 +1,13 @@
 import tensorflow as tf
+from common.util import compute_mask
 
-def compute_euclidean_loss(pre, gt, mask):
+def compute_euclidean_loss(pre, gt):
     # reshape
-    batch, height, width, channel = pre.get_shape().as_list()
-
+    # batch, height, width, channel = pre.get_shape().as_list()
+    mask = compute_mask(gt, invalid_value=127)
     pre_masked = tf.multiply(pre, mask)
     #gt_masked = tf.multiply(gt, mask)
     #rgb_masked = tf.multiply(rgb, mask)
-
     total_loss = tf.reduce_sum(tf.square(tf.subtract(pre_masked, gt)))
     # total_count = tf.divide(tf.reduce_sum(mask_num), channel)
     total_count = tf.reduce_sum(mask)
@@ -17,7 +17,8 @@ def compute_euclidean_loss(pre, gt, mask):
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def compute_dot_loss(pre, gt, mask):
+def compute_dot_loss(pre, gt):
+    mask = compute_mask(gt, invalid_value=127)
     dots = tf.reduce_sum(tf.multiply(pre, gt))
     total_count = tf.reduce_sum(mask)
     loss = tf.multiply(tf.divide(dots, total_count), -1)
@@ -46,7 +47,18 @@ def compute_cross_entry_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def compute_accuracy(pre, gt):
+
+
+def compute_accuracy(pre, gt, invalid_label=None):
     correct = tf.equal(tf.argmax(pre, axis=3), gt)
-    accuracy = tf.reduce_mean(correct)
+    # get the mask
+    if invalid_label is not None:
+        mask = compute_mask(gt, invalid_value=19)
+        # mask the invalid out
+        correct = tf.multiply(mask, correct)
+        total_val = tf.reduce_sum(correct)
+        total_count = tf.reduce_sum(mask)
+        accuracy = tf.divide(total_val, total_count)
+    else:
+        accuracy = tf.reduce_mean(correct)
     return accuracy

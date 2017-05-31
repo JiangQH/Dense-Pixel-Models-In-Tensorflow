@@ -6,9 +6,8 @@ path = osp.dirname(parent_dir)
 sys.path.append(path)
 
 from model import build_encoder, build_decoder
-from common.loss import compute_cross_entry_with_weight
+from common.loss import compute_cross_entry_with_weight, compute_accuracy
 from common.util import load_config
-from common.denseinput import DenseInput
 import tensorflow as tf
 import time
 import numpy as np
@@ -18,7 +17,11 @@ import argparse
 def solve(config):
     with tf.Graph().as_default() as g:
         # get the data pipline
-        images, labels= DenseInput(config).densedata_pipelines()
+        images = tf.placeholder(dtype=tf.float32, shape=[config.batch_size, config.image_height,
+                                                         config.image_width, 3])
+        labels = tf.placeholder(dtype=tf.float32, shape=[config.batch_size, config.label_height,
+                                                         config.label_width, config.label_channel])
+        # images, labels= DenseInput(config).densedata_pipelines()
         # val_images, val_labels = DenseInput(config).densedata_pipelines(is_training=False)
         # infer the output according to the current stage, train the encoder or train them together
         if config.train_decoder:
@@ -29,7 +32,9 @@ def solve(config):
             out = build_encoder(images=images, is_training=True, label_channel=config.label_channel)
 
         # compute the loss and accuracy
-        loss = compute_cross_entry_with_weight(out, labels, config.label_probs, config.c)
+        loss = compute_cross_entry_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
+        accuracy = compute_accuracy(out, labels, config.invalid_label)
+        # compute the accuracy
         # val_loss = compute_cross_entry()
         # the train op
         global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -51,12 +56,12 @@ def solve(config):
                 saver.restore(sess, ckpt_path)
 
             # begin the training job
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(sess, coord)
             print 'begin training now'
             start_time = time.time()
             local_start_time = time.time()
             for step in xrange(config.max_iter + 1):
+                # construct the feed dict, fetch the data
+                # //todo
                 _, loss_val = sess.run([train_op, loss])
                 if step % config.display == 0 or step == config.max_iter:
                     print '{}[iterations], train loss {}, time consumes {}'.format(step,
@@ -70,8 +75,7 @@ def solve(config):
                     print 'snapshot the model'
                     saver.save(sess, osp.join(config.model_dir, 'model.ckpt'), global_step=global_step)
 
-            coord.request_stop()
-            coord.join(threads)
+
             print 'done, total time comsums {}'.format(time.time() - start_time)
 
             sess.close()
