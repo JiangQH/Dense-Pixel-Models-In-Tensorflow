@@ -6,7 +6,7 @@ path = osp.dirname(parent_dir)
 sys.path.append(path)
 
 from model import build_encoder, build_decoder
-from common.loss import compute_cross_entry
+from common.loss import compute_cross_entry_with_weight
 from common.util import load_config
 from common.denseinput import DenseInput
 import tensorflow as tf
@@ -22,14 +22,14 @@ def solve(config):
         # val_images, val_labels = DenseInput(config).densedata_pipelines(is_training=False)
         # infer the output according to the current stage, train the encoder or train them together
         if config.train_decoder:
-            encode = build_encoder(images, is_training=True)
-            out = build_decoder(encode, is_training=True, label_channel=config.label_channel)
+            encode = build_encoder(images=images, is_training=True)
+            out = build_decoder(encoder=encode, is_training=True, label_channel=config.label_channel)
         else:
             # only train the encoder
-            out = build_encoder(images, is_training=True, label_channel=config.label_channel)
+            out = build_encoder(images=images, is_training=True, label_channel=config.label_channel)
 
         # compute the loss and accuracy
-        loss = compute_cross_entry(out, labels)
+        loss = compute_cross_entry_with_weight(out, labels, config.label_probs, config.c)
         # val_loss = compute_cross_entry()
         # the train op
         global_step = tf.Variable(0, name='global_step', trainable=False)

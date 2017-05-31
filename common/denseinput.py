@@ -13,13 +13,14 @@ class DenseInput(object):
         file_source = self.config.source if is_training else self.config.val_source
         filename_queues = tf.train.string_input_producer([file_source], shuffle=True)
         # read the data in
-        image, label, invalid_mask = self._file_reader(filename_queues)
+        image, label = self._file_reader(filename_queues)
         # return batch
-        images, labels, invalid_masks = tf.train.batch([image, label, invalid_mask],
-                                                       batch_size=self.config.batch_size,
-                                                       num_threads=4,
-                                                       capacity=50 + 3 * self.batch_size)
-        return images, labels, invalid_masks
+        images, labels = tf.train.batch([image, label],
+                                        batch_size=self.config.batch_size if is_training else 1,
+                                        num_threads=4,
+                                        capacity=50 + 3 * self.batch_size)
+        return images, labels
+
 
     def _file_reader(self, filename_queues):
         reader = tf.TextLineReader()
@@ -32,9 +33,9 @@ class DenseInput(object):
         label_file = tf.read_file(label_name)
         label = tf.image.decode_png(label_file, channels=self.config.label_channel)
         # preprocess
-        image, label, mask = preprocess(image, label, self.config)
+        image, label = preprocess(image, label, self.config)
         # get the invalid_mask
         # invalid_mask = tf.equal(label, [0, 0, 0])
-        return image, label, mask
+        return image, label
 
 
