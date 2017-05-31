@@ -18,7 +18,7 @@ import argparse
 def solve(config):
     with tf.Graph().as_default() as g:
         # get the data pipline
-        images, labels, masks = DenseInput(config).densedata_pipelines()
+        images, labels= DenseInput(config).densedata_pipelines()
         # val_images, val_labels = DenseInput(config).densedata_pipelines(is_training=False)
         # infer the output according to the current stage, train the encoder or train them together
         if config.train_decoder:

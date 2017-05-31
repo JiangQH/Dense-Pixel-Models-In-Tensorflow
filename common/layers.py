@@ -2,19 +2,65 @@ import tensorflow as tf
 from tensorflow.python.ops import gen_nn_ops
 from tensorflow.python.framework import ops
 
+import numbers
+
+def _get_weights_stddev(shape, type='xavier'):
+    """
+    get the weight stddev by the kernel shape
+    :param shape:
+    :param type:
+    :return:
+    """
+    if len(shape) == 1:
+        fan_in = fan_out = 1
+    elif len(shape) == 2:
+        fan_in = shape[0]
+        fan_out = shape[1]
+    else:
+        receiptive = 1
+        for dim in shape[:-2]:
+            receiptive *= dim
+        fan_in = receiptive * shape[-2]
+        fan_out = receiptive * shape[-1]
+    scale = 1.0 / tf.maximum(1.0, (fan_in + fan_out) / 2.0)
+    if type == 'xavier':
+        stddev = tf.sqrt(scale)
+    else:
+        raise Exception('unknown weights init type {}'.format(type))
+    return stddev
+
 def _get_variable(name, shape, initializer):
     var = tf.get_variable(name, shape, initializer=initializer, dtype=tf.float32)
     return var
 
-def _weights_with_weight_decay(name, shape, wd, initializer):
-    var = _get_variable(name, shape, initializer)
+def _weights_with_weight_decay(name, shape, wd, w_initializer):
+    # first get the weights stddev
+    """
+    if isinstance(initializer, basestring):
+        stddev = _get_weights_stddev(shape, type=initializer)
+    elif isinstance(initializer, numbers.Number):
+        stddev = initializer
+    else:
+        raise Exception('weight initializer must be str or number')
+    """
+    # get the initializer
+    if isinstance(w_initializer, numbers.Number):
+        initializer = tf.truncated_normal_initializer(stddev=w_initializer)
+    elif w_initializer == 'xavier':
+        stddev = _get_weights_stddev(shape, w_initializer)
+        initializer = tf.truncated_normal_initializer(stddev=stddev)
+    else:
+        raise Exception('weight initializer should be str or numbers')
+
+    var = _get_variable(name, shape, initializer=initializer)
     if wd:
-        weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+        weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_decay_loss')
         tf.add_to_collection('losses', weight_decay)
     return var
 
+
 def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
-           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
+           bias_var=None, wd=0.001, weight_initializer='xavier'):
     # get the weight
     with tf.variable_scope(name) as scope:
         if type(kernel) is list:
@@ -22,7 +68,7 @@ def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
         else:
             weight_shape = [kernel, kernel, input_channels, output_channels]
         weight = _weights_with_weight_decay('w_' + name, shape=weight_shape,
-                                            wd=wd, initializer=initializer)
+                                            wd=wd, w_initializer=weight_initializer)
         # do the convolution job
         conv = tf.nn.conv2d(inputs, weight, [1, stride, stride, 1], padding='SAME')
         # if we need the biases ?
@@ -34,13 +80,13 @@ def conv2d(name, inputs, input_channels, output_channels, kernel, stride,
         return conv
 
 def dilated_conv(name, inputs, input_channels, output_channels, kernel, dilated_rate,
-           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
+           bias_var=None, wd=0.001, weight_initializer='xavier'):
     with tf.variable_scope(name) as scope:
         if type(kernel) is list:
             weight_shape = kernel + [input_channels, output_channels]
         else:
             weight_shape = [kernel, kernel, input_channels, output_channels]
-        weight = _weights_with_weight_decay('w_'+name, weight_shape, wd, initializer)
+        weight = _weights_with_weight_decay('w_'+name, weight_shape, wd, weight_initializer)
 
         # do the dilation job
         conv = tf.nn.atrous_conv2d(inputs, weight, rate=dilated_rate, padding='SAME')
@@ -72,18 +118,18 @@ def spatial_dropout(inputs, dropout_rate, is_training):
 
 
 def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=1,
-          bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
+          bias_var=None, wd=0.001, weight_initializer='xavier'):
     conv = conv2d(name, inputs, input_channels, output_channels, kernel,
-                  stride, bias_var, wd, initializer)
+                  stride, bias_var, wd, weight_initializer)
     bn = batchnorm(name+'_bn', conv, phase)
     return relu(bn)
 
 def deconv(name, inputs, input_channels, output_channels, kernel, stride,
-           bias_var=None, wd=0.001, initializer=tf.truncated_normal_initializer(stddev=0.1)):
+           bias_var=None, wd=0.001, weight_initializer='xavier'):
     with tf.variable_scope(name):
         # get the weight
         weight_shape = [kernel, kernel, output_channels, input_channels]
-        weight = _weights_with_weight_decay('w_' + name, weight_shape, wd=wd, initializer=initializer)
+        weight = _weights_with_weight_decay('w_' + name, weight_shape, wd=wd, w_initializer=weight_initializer)
         # get out shape
         batch, height, width, channel = inputs.get_shape().as_list()
         out_shape = tf.stack([batch, height * stride, width * stride, output_channels])
@@ -93,7 +139,6 @@ def deconv(name, inputs, input_channels, output_channels, kernel, stride,
             bias_shape = [output_channels]
             bias = _get_variable('b_' + name, bias_shape, tf.constant_initializer(bias_var))
             conv = tf.nn.bias_add(conv, bias)
-
         return conv
 
 def batchnorm(name, inputs, is_training=True, decay=0.9):
