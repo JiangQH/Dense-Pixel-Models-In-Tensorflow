@@ -1,16 +1,18 @@
 import tensorflow as tf
 import yaml
+import Image
+import numpy as np
 
 def preprocess(image_tensor, label_tensor, config):
     # resize and cast
-    image_tensor = tf.image.resize_images(image_tensor, (config.image_width, config.image_height))
+    image_tensor = tf.image.resize_images(image_tensor, config.image_size)
     image_tensor = tf.cast(image_tensor, tf.float32)
     # subtrac mean if need
     if config.mean:
         image_tensor = image_tensor - config.mean
 
 
-    label_tensor = tf.image.resize_images(label_tensor, (config.label_width, config.label_height))
+    label_tensor = tf.image.resize_images(label_tensor, config.label_size)
     # split into three and add and concat back to get the final mask, if it is surface normal
     if config.label_channel == 3:
         label_tensor = tf.subtract(tf.divide(tf.multiply(label_tensor, [2.0]), [255.0]), [1.0])
@@ -43,3 +45,7 @@ def compute_mask(label_tensor, invalid_value=0):
         summing = tf.add(summing, split_mask)
     mask = tf.cast(tf.not_equal(summing, 0), tf.float32)
     return mask
+
+
+def read_img(img_file):
+    return np.asarray(Image.open(img_file))
