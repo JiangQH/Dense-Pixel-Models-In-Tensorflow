@@ -53,6 +53,7 @@ def compute_cross_entry_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
 def compute_accuracy(pre, gt, invalid_label=None):
     gt = tf.cast(gt, tf.int64)
     correct = tf.cast(tf.equal(tf.argmax(pre, axis=3), gt), tf.float32)
+    #correct = tf.cast(tf.equal(gt, gt), tf.float32)
     # get the mask
     if invalid_label is not None:
         mask = compute_mask(gt, invalid_value=19)

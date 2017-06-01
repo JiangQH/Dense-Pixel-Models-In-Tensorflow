@@ -14,6 +14,7 @@ import time
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+import simplejson
 
 def solve(config):
     with tf.Graph().as_default() as g:
@@ -67,6 +68,9 @@ def solve(config):
             print 'begin training now'
             start_time = time.time()
             local_start_time = time.time()
+            train_losses = []
+            val_losses = []
+            accuracies = []
             for step in xrange(config.max_iter + 1):
                 # construct the feed dict, fetch the data
                 imgs, gts = data_loader.next_train_batch()
@@ -77,30 +81,45 @@ def solve(config):
                 train_feed_dict = {images: imgs, labels: gts}
                 _, loss_val = sess.run([train_op, loss], feed_dict=train_feed_dict)
                 if step % config.display == 0 or step == config.max_iter:
-                    print '{}[iterations], train loss {}, time consumes {}'.format(step,
-                                                                                   loss_val,
-                                                                                   time.time()-local_start_time)
+                    print '{}[iterations], time consumes {}, train loss {}'.format(step,
+                                                                                     time.time() - local_start_time,
+                                                                                     loss_val
+                                                                                    )
                     local_start_time = time.time()
 
                 assert not np.isnan(loss_val), 'model with loss nan'
+                train_losses.append(loss_val)
 
                 if step % config.test_iter == 0 or step == config.max_iter:
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts}
-                    accu, loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    print 'test model, with loss val {}, accuracy {}'.format(loss_val, accu)
+                    accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    accuracies.append(accu)
+                    val_losses.append(val_loss_val)
+                    print 'test model, {}[iterations], with loss val {}, accuracy {}'.format(step, val_loss_val, accu)
 
                 if step != 0 and (step % config.snapshot == 0 or step == config.max_iter):
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts}
-                    accu, loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    print 'snapshot model with loss val {}, accuracy {}'.format(accu, loss_val)
+                    accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    accuracies.append(accu)
+                    val_losses.append(val_loss_val)
+                    print 'snapshot model with loss val {}, accuracy {}'.format(val_loss_val, accu)
                     saver.save(sess, osp.join(config.model_dir, 'model.ckpt'), global_step=global_step)
 
 
             print 'done, total time comsums {}'.format(time.time() - start_time)
-
+            with open('train_loss_log.txt', 'w') as f:
+                simplejson.dump(train_losses, f)
+                f.close()
+            with open('val_loss_log.txt', 'w') as f:
+                simplejson.dump(val_losses, f)
+                f.close()
+            with open('val_accu_log.txt', 'w') as f:
+                simplejson.dump(accuracies, f)
+                f.close()
             sess.close()
+
 
 
 def main(args):

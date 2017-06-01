@@ -8,7 +8,7 @@ model_dir: ./model
 batch_size: 1  # batch_size
 lr: 0.0005
 max_iter: 70000
-test_iter: 10
+test_iter: 100
 #momentum: 0.9
 #stepsize: 50
 #gamma: 0.1
