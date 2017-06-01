@@ -5,7 +5,7 @@ model_dir: ./model
 
 
 # training params
-batch_size: 1  # batch_size
+batch_size: 2  # batch_size
 lr: 0.0005
 max_iter: 70000
 test_iter: 100

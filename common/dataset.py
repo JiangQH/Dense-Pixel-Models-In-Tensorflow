@@ -93,9 +93,9 @@ class BathLoader(object):
         """
         images = np.empty((self.batch_size, self.image_size[1], self.image_size[0], 3))
         if self.label_channel == 1:
-            labels = np.empty((self.test_batch, self.label_size[1], self.label_size[0]))
+            labels = np.empty((self.batch_size, self.label_size[1], self.label_size[0]))
         else:
-            labels = np.empty((self.test_batch, self.label_size[1], self.label_size[0], 3))
+            labels = np.empty((self.batch_size, self.label_size[1], self.label_size[0], 3))
         for i in range(self.batch_size):
             img, label = self._load_next_image(is_train=True)
             images[i, ...] = img
