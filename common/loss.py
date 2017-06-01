@@ -36,7 +36,8 @@ def compute_cross_entry_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
             weighing.append(tf.divide(1.0, tf.log(c + probs[i])))
     weighing = tf.stack(weighing)
     # generate the whole mask
-    weight_mask = tf.gather(weighing, tf.cast(gt, tf.int32))
+    gt = tf.cast(gt, tf.int64)
+    weight_mask = tf.gather(weighing, gt)
     # compute the softmax loss
     weighted_cross_entropy = tf.multiply(weight_mask, tf.nn.sparse_softmax_cross_entropy_with_logits(labels=gt, logits=pre))
     # the final loss
@@ -50,7 +51,8 @@ def compute_cross_entry_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
 
 
 def compute_accuracy(pre, gt, invalid_label=None):
-    correct = tf.equal(tf.argmax(pre, axis=3), gt)
+    gt = tf.cast(gt, tf.int64)
+    correct = tf.cast(tf.equal(tf.argmax(pre, axis=3), gt), tf.float32)
     # get the mask
     if invalid_label is not None:
         mask = compute_mask(gt, invalid_value=19)

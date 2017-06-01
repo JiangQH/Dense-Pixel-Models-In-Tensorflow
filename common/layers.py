@@ -45,9 +45,11 @@ def _weights_with_weight_decay(name, shape, wd, w_initializer):
     """
     if w_initializer == 'xavier':
         stddev = _get_weights_stddev(shape, w_initializer)
-        w_initializer = tf.truncated_normal_initializer(stddev=stddev)
+        initializer = tf.truncated_normal_initializer(stddev=stddev)
+    else:
+        initializer = w_initializer
 
-    var = _get_variable(name, shape, initializer=w_initializer)
+    var = _get_variable(name, shape, initializer=initializer)
     if wd:
         weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_decay_loss')
         tf.add_to_collection('losses', weight_decay)

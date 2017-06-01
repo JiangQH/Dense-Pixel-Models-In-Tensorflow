@@ -131,7 +131,7 @@ def _initial_block(name, inputs, input_channels=3, output_channel=13, kerne=3, s
     return out
 
 
-def build_encoder(images, is_training=True, label_channel=None):
+def build_encoder(images, is_training=True, num_classes=None):
     # the init block
     encode = _initial_block('initial', images)
     # the bottleneck 1.0
@@ -156,14 +156,14 @@ def build_encoder(images, is_training=True, label_channel=None):
         encode = _bottleneck_encoder('bottleneck{}.7'.format(i+2), encode, 128, 128, asy=5, is_training=is_training)
         encode = _bottleneck_encoder('bottleneck{}.8'.format(i+2), encode, 128, 128, dilated=16, is_training=is_training)
 
-    if label_channel is not None:
+    if num_classes is not None:
         # train the encoder first
-        encode = conv2d('prediction', encode, 128, label_channel, 1, 1, bias_var=None, wd=0)
+        encode = conv2d('prediction', encode, 128, num_classes, 1, 1, bias_var=None, wd=0)
 
     return encode
 
 
-def build_decoder(encoder, is_training=True, label_channel=3):
+def build_decoder(encoder, is_training=True, num_classes=20):
     # upsamle model
     decode = _bottleneck_decoder('bottleneck4.0', encoder, 128, 64, upsample=True, reverse_module=True,
                                  is_training=is_training)
@@ -173,7 +173,7 @@ def build_decoder(encoder, is_training=True, label_channel=3):
                                  is_training=is_training)
     decode = _bottleneck_decoder('bottleneck5.1', decode, 16, 16, is_training=is_training)
     # the output
-    out = deconv('prediction', decode, 16, label_channel, 2, 2, bias_var=None, wd=0)
+    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=0)
 
     return out
 

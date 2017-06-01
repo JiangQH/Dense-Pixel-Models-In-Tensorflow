@@ -6,10 +6,10 @@ import numpy as np
 class BathLoader(object):
     def __init__(self, config):
         self.source = config.source
-        if hasattr(config, 'val_source'):
-            self.val_source = config.val_source
+        if hasattr(config, 'test_source'):
+            self.test_source = config.test_source
         else:
-            self.val_source = None
+            self.test_source = None
 
         if hasattr(config, 'mean'):
             self.mean = config.mean
@@ -24,16 +24,20 @@ class BathLoader(object):
             self.mirror = False
 
         self.train_list = [line.rstrip('\n') for line in open(self.source)]
-        self.val_list = [line.rstrip('\n') for line in open(self.val_source)] if self.val_source is not None else None
+        self.val_list = [line.rstrip('\n') for line in open(self.test_source)] if self.test_source is not None else None
+
         shuffle(self.train_list)
-        shuffle(self.val_list)
+        if self.test_source is not None:
+            shuffle(self.val_list)
         self.image_size = config.image_size
         self.label_size = config.label_size
         self.batch_size = config.batch_size
-        if hasattr(config, 'val_batch'):
-            self.val_batch = config.val_batch
+        self.label_channel = config.label_channel
+        assert (self.label_channel == 1 or self.label_channel == 3)
+        if hasattr(config, 'test_batch'):
+            self.test_batch = config.val_batch
         else:
-            self.val_batch = 1
+            self.test_batch = 1
         self._train_cur = 0
         self._epoch = 1
         self._val_cur = 0
@@ -50,20 +54,20 @@ class BathLoader(object):
                 shuffle(self.train_list)
                 print '{} epoch finished'.format(self._epoch)
                 self._epoch += 1
-            [image_file, label_file] = self.train_list[self._train_cur].split()
+            [image_file, label_file] = self.train_list[self._train_cur].split(',')
         else:
             if self._val_cur == len(self.val_list):
                 self._val_cur = 0
                 shuffle(self.val_list)
-            [image_file, label_file] = self.val_list[self._val_cur].split()
+            [image_file, label_file] = self.val_list[self._val_cur].split(',')
 
         # read the image and label image
         img = read_img(image_file)
         label = read_img(label_file)
 
         # reshape if needed
-        img = cv2.resize(img, self.image_size)
-        label = cv2.resize(label, self.label_size)
+        img = cv2.resize(img, (self.image_size[0], self.image_size[1]))
+        label = cv2.resize(label, (self.label_size[0], self.label_size[1]))
 
         # random flip if needed
         if self.mirror and is_train:
@@ -87,8 +91,11 @@ class BathLoader(object):
         load next batch data for training
         :return:
         """
-        images = np.empty((self.batch_size, self.image_size, 3))
-        labels = np.empty((self.batch_size, self.label_size, 1))
+        images = np.empty((self.batch_size, self.image_size[1], self.image_size[0], 3))
+        if self.label_channel == 1:
+            labels = np.empty((self.test_batch, self.label_size[1], self.label_size[0]))
+        else:
+            labels = np.empty((self.test_batch, self.label_size[1], self.label_size[0], 3))
         for i in range(self.batch_size):
             img, label = self._load_next_image(is_train=True)
             images[i, ...] = img
@@ -100,11 +107,14 @@ class BathLoader(object):
         load next batch data for val
         :return:
         """
-        if self.val_source is None:
+        if self.test_source is None:
             raise Exception('No val source')
-        images = np.empty((self.val_batch, self.image_size, 3))
-        labels = np.empty((self.val_batch, self.label_size, 1))
-        for i in range(self.val_batch):
+        images = np.empty((self.test_batch, self.image_size[1], self.image_size[0], 3))
+        if self.label_channel == 1:
+            labels = np.empty((self.test_batch, self.label_size[1], self.label_size[0]))
+        else:
+            labels = np.empty((self.test_batch, self.label_size[1], self.label_size[0], 3))
+        for i in range(self.test_batch):
             img, label = self._load_next_image(is_train=False)
             images[i, ...] = img
             labels[i, ...] = label
