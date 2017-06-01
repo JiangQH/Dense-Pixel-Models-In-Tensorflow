@@ -15,6 +15,7 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 import simplejson
+MAX_ITER = 999999
 
 def solve(config):
     with tf.Graph().as_default() as g:
@@ -71,7 +72,8 @@ def solve(config):
             train_losses = []
             val_losses = []
             accuracies = []
-            for step in xrange(config.max_iter + 1):
+            # change it to use max_epoch to stop other than the max iter
+            for step in xrange(MAX_ITER + 1):
                 # construct the feed dict, fetch the data
                 imgs, gts = data_loader.next_train_batch()
                 #plt.figure(1)
@@ -104,11 +106,21 @@ def solve(config):
                     accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(accu)
                     val_losses.append(val_loss_val)
-                    print 'snapshot model with loss val {}, accuracy {}'.format(val_loss_val, accu)
+                    print 'snapshot model with validation loss val {}, accuracy {}'.format(val_loss_val, accu)
                     saver.save(sess, osp.join(config.model_dir, 'model.ckpt'), global_step=global_step)
 
+                # should we stop now ?
+                if data_loader.get_epoch() == config.max_epoch + 1:
+                    imgs, gts = data_loader.next_val_batch()
+                    val_feed_dict = {images: imgs, labels: gts}
+                    accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    accuracies.append(accu)
+                    val_losses.append(val_loss_val)
+                    print 'training done! with validation loss val {}, accuracy {}'.format(val_loss_val, accu)
+                    saver.save(sess, osp.join(config.model_dir, 'model.ckpt'), global_step=global_step)
+                    break
 
-            print 'done, total time comsums {}'.format(time.time() - start_time)
+            print 'total time comsums {}'.format(time.time() - start_time)
             with open('train_loss_log.txt', 'w') as f:
                 simplejson.dump(train_losses, f)
                 f.close()

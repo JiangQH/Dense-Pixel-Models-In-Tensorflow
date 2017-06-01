@@ -120,5 +120,8 @@ class BathLoader(object):
             labels[i, ...] = label
         return images, labels
 
+    def get_epoch(self):
+        return self._epoch
+
 
 
