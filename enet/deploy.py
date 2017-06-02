@@ -55,6 +55,8 @@ def deploy_encoder(imgs, out_dir, model_dir):
                     for i in range(count):
                         pre = pres[i, ...]
                         out_name = out_names[i]
+                        #plt.figure(1)
+                        #plt.imshow(pre)
                         scipy.misc.imsave(out_name, np.uint8(pre))
                     print 'forwading done with {}'.format(time.time() - start)
                     # reset data
@@ -73,7 +75,7 @@ def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--in_dir', '-i', default='/media/jqh/My Passport/Private/dataset/cityscapes/trial/rgb', help='path to input dir')
     parser.add_argument('--out_dir', '-o', default='./output', help='path to the output dir')
-    parser.add_argument('--model_dir', '-m', default='../model', help='path to the model dir')
+    parser.add_argument('--model_dir', '-m', default='./model', help='path to the model dir')
     return parser
 
 

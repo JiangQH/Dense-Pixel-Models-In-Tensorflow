@@ -62,7 +62,8 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
                              bias_var=None, wd=wd)
         main_branch = batchnorm(name+'_main_unit3_bn', main_branch, is_training, decay=bn_decay)
         # the regularizar, spatial dropout
-        main_branch = spatial_dropout(main_branch, dropout_ratio, is_training)
+        if is_training:
+            main_branch = spatial_dropout(main_branch, dropout_ratio)
 
         # the other branch can be maxpooling and padding or nothing
         other = inputs

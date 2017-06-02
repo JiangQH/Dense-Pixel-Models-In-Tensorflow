@@ -93,7 +93,7 @@ def dilated_conv(name, inputs, input_channels, output_channels, kernel, dilated_
             conv = tf.nn.bias_add(conv, bias)
         return conv
 
-def spatial_dropout(inputs, dropout_rate, is_training):
+def spatial_dropout(inputs, dropout_rate):
     """
     perform the spatial dropout to the whole feature map
     dropout ration is only performed on the channel space
@@ -103,14 +103,18 @@ def spatial_dropout(inputs, dropout_rate, is_training):
     :return:
     """
     # get a noise mask to do the dropout job, get the mask shape
-    if is_training:
-        channel_num = inputs.get_shape().as_list()[-1]
-        bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform([channel_num]), dropout_rate))
-        # mask it to the whole channel feature map
-        output = tf.multiply(inputs, bernoulli_mask)
-        return output
-    else:
-        return tf.multiply(inputs, 1-dropout_rate)
+    channel_num = inputs.get_shape().as_list()[-1]
+    bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform([channel_num]), dropout_rate))
+    # mask it to the whole channel feature map, broadcasting used
+    output = tf.multiply(inputs, bernoulli_mask)
+    keep_ratio = 1 - dropout_rate
+    # rescale the input to let the val unchanged
+    output = tf.divide(output, keep_ratio)
+    return output
+
+
+
+
 
 
 
@@ -145,6 +149,7 @@ def batchnorm(name, inputs, is_training=True, decay=0.9):
                                            scale=True,
                                            is_training=is_training,
                                            decay=decay)
+
         return out
 
 def relu(inputs):

@@ -7,12 +7,12 @@ model_dir: ./model
 # training params
 batch_size: 2  # batch_size
 lr: 0.0005
-max_iter: 70000
+max_epoch: 100
+snapshot_epoch: 2500
 test_iter: 100
 #momentum: 0.9
 #stepsize: 50
 #gamma: 0.1
-snapshot: 10000
 weight_decay: 0.0002
 train_decoder: False
 label_probs: [0.36880975774750857, 0.060868740541025507, 0.22819570283385351,
@@ -29,7 +29,6 @@ num_classes: 20
 # [width, height] shape
 image_size: [480, 360]
 label_size: [60, 45]
-phase: True
 label_channel: 1  #the label map channel
 mean: [0, 0, 0] # image mean to sub
 display: 10

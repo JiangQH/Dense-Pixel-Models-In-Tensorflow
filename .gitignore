@@ -4,3 +4,4 @@
 *.csv
 *.npy
 *model
+*output

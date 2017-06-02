@@ -15,7 +15,7 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 import simplejson
-MAX_ITER = 999999
+MAX_ITER = 9999999
 
 def solve(config):
     with tf.Graph().as_default() as g:
@@ -72,6 +72,7 @@ def solve(config):
             train_losses = []
             val_losses = []
             accuracies = []
+            train_accuracies = []
             # change it to use max_epoch to stop other than the max iter
             for step in xrange(MAX_ITER + 1):
                 # construct the feed dict, fetch the data
@@ -81,48 +82,54 @@ def solve(config):
                 #plt.figure(2)
                 #plt.imshow(np.uint8(gts[0, ...]))
                 train_feed_dict = {images: imgs, labels: gts}
-                _, loss_val = sess.run([train_op, loss], feed_dict=train_feed_dict)
-                if step % config.display == 0 or step == config.max_iter:
-                    print '{}[iterations], time consumes {}, train loss {}'.format(step,
+                _, loss_val, train_accu = sess.run([train_op, loss, accuracy], feed_dict=train_feed_dict)
+                if step % config.display == 0 or step == MAX_ITER:
+                    print '{}[iterations], time consumes {}, train loss {}, train accuracy {}'.format(step,
                                                                                      time.time() - local_start_time,
-                                                                                     loss_val
+                                                                                     loss_val, train_accu
                                                                                     )
                     local_start_time = time.time()
 
                 assert not np.isnan(loss_val), 'model with loss nan'
                 train_losses.append(loss_val)
+                train_accuracies.append(train_accu)
 
-                if step % config.test_iter == 0 or step == config.max_iter:
+                if step % config.test_iter == 0 or step == MAX_ITER:
+                    print '.............testing model..............'
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts}
-                    accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    accuracies.append(accu)
+                    val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
-                    print 'test model, {}[iterations], with loss val {}, accuracy {}'.format(step, val_loss_val, accu)
+                    print '{}[iterations], val loss {}, val accuracy {}'.format(step, val_loss_val, val_accu)
 
-                if step != 0 and (step % config.snapshot == 0 or step == config.max_iter):
+                if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
+                    print '..............snapshot model.............'
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts}
-                    accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    accuracies.append(accu)
+                    val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
-                    print 'snapshot model with validation loss val {}, accuracy {}'.format(val_loss_val, accu)
-                    saver.save(sess, osp.join(config.model_dir, 'model.ckpt'), global_step=global_step)
+                    print '{}[iterations], val loss{}, val accuracy {}'.format(step, val_loss_val, val_accu)
+                    saver.save(sess, osp.join(config.model_dir, 'enet_model.ckpt'), global_step=global_step)
 
                 # should we stop now ?
                 if data_loader.get_epoch() == config.max_epoch + 1:
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts}
-                    accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    accuracies.append(accu)
+                    val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
-                    print 'training done! with validation loss val {}, accuracy {}'.format(val_loss_val, accu)
-                    saver.save(sess, osp.join(config.model_dir, 'model.ckpt'), global_step=global_step)
+                    print 'training done! with validation loss val {}, accuracy {}'.format(val_loss_val, val_accu)
+                    saver.save(sess, osp.join(config.model_dir, 'enet_model.ckpt'), global_step=global_step)
                     break
 
             print 'total time comsums {}'.format(time.time() - start_time)
             with open('train_loss_log.txt', 'w') as f:
                 simplejson.dump(train_losses, f)
+                f.close()
+            with open('train_accu_log.txt', 'w') as f:
+                simplejson.dump(train_accuracies, f)
                 f.close()
             with open('val_loss_log.txt', 'w') as f:
                 simplejson.dump(val_losses, f)
