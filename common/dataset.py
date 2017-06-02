@@ -35,7 +35,7 @@ class BathLoader(object):
         self.label_channel = config.label_channel
         assert (self.label_channel == 1 or self.label_channel == 3)
         if hasattr(config, 'test_batch'):
-            self.test_batch = config.val_batch
+            self.test_batch = config.test_batch
         else:
             self.test_batch = 1
         self._train_cur = 0

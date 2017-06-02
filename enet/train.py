@@ -36,11 +36,11 @@ def solve(config):
         # val_images, val_labels = DenseInput(config).densedata_pipelines(is_training=False)
         # infer the output according to the current stage, train the encoder or train them together
         if config.train_decoder:
-            encode = build_encoder(images=images, is_training=True)
-            out = build_decoder(encoder=encode, is_training=True, num_classes=config.num_classes)
+            encode = build_encoder(images=images, is_training=is_training)
+            out = build_decoder(encoder=encode, is_training=is_training, num_classes=config.num_classes)
         else:
             # only train the encoder
-            out = build_encoder(images=images, is_training=True, num_classes=config.num_classes)
+            out = build_encoder(images=images, is_training=is_training, num_classes=config.num_classes)
 
         # compute the loss and accuracy
         loss = compute_cross_entry_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)

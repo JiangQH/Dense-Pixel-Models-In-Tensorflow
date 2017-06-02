@@ -8,7 +8,7 @@ model_dir: ./model
 batch_size: 2  # batch_size
 lr: 0.0005
 max_epoch: 100
-snapshot_epoch: 2500
+snapshot: 2500
 test_iter: 100
 #momentum: 0.9
 #stepsize: 50
