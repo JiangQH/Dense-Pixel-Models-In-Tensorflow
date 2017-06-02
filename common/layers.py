@@ -125,12 +125,13 @@ def spatial_dropout(inputs, is_training, dropout_rate):
 
 
 
-def convs(name, inputs, input_channels, output_channels, phase, kernel=3, stride=1,
+def conv_block(name, is_training, inputs, input_channels, output_channels, kernel=3, stride=1,
           bias_var=None, wd=0.001, weight_initializer='xavier'):
     conv = conv2d(name, inputs, input_channels, output_channels, kernel,
                   stride, bias_var, wd, weight_initializer)
-    bn = batchnorm(name+'_bn', conv, phase)
+    bn = batchnorm(name+'_bn', is_training, conv)
     return relu(bn)
+
 
 def deconv(name, inputs, input_channels, output_channels, kernel, stride,
            bias_var=None, wd=0.001, weight_initializer='xavier'):
@@ -149,7 +150,7 @@ def deconv(name, inputs, input_channels, output_channels, kernel, stride,
             conv = tf.nn.bias_add(conv, bias)
         return conv
 
-def batchnorm(name, is_training, inputs, decay=0.1):
+def batchnorm(name, is_training, inputs, decay=0.99):
     """
     self define batch normalization layer
     :param name:
