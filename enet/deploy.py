@@ -57,7 +57,7 @@ def deploy_encoder(imgs, out_dir, model_dir):
                         out_name = out_names[i]
                         #plt.figure(1)
                         #plt.imshow(pre)
-                        scipy.misc.imsave(out_name, np.uint8(pre))
+                        scipy.misc.imsave(out_name, pre)
                     print 'forwading done with {}'.format(time.time() - start)
                     # reset data
                     out_names = []
@@ -67,7 +67,7 @@ def deploy_encoder(imgs, out_dir, model_dir):
             for i in range(count):
                 pre = pres[i, ...]
                 out_name = out_names[i]
-                scipy.misc.imsave(out_name, np.uint8(pre))
+                scipy.misc.imsave(out_name, pre)
 
             sess.close()
 

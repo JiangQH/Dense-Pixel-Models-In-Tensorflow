@@ -5,3 +5,4 @@
 *.npy
 *model
 *output
+*out_deploy

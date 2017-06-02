@@ -30,6 +30,7 @@ def solve(config):
             labels = tf.placeholder(dtype=tf.float32, shape=[config.batch_size, config.label_size[1],
                                                              config.label_size[0], 3])
 
+        is_training = tf.placeholder(dtype=tf.bool, name='is_training')
         data_loader = BathLoader(config)
         # images, labels= DenseInput(config).densedata_pipelines()
         # val_images, val_labels = DenseInput(config).densedata_pipelines(is_training=False)
@@ -81,7 +82,7 @@ def solve(config):
                 #plt.imshow(np.uint8(imgs[0, ...]))
                 #plt.figure(2)
                 #plt.imshow(np.uint8(gts[0, ...]))
-                train_feed_dict = {images: imgs, labels: gts}
+                train_feed_dict = {images: imgs, labels: gts, is_training: True}
                 _, loss_val, train_accu = sess.run([train_op, loss, accuracy], feed_dict=train_feed_dict)
                 if step % config.display == 0 or step == MAX_ITER:
                     print '{}[iterations], time consumes {}, train loss {}, train accuracy {}'.format(step,
@@ -97,7 +98,7 @@ def solve(config):
                 if step % config.test_iter == 0 or step == MAX_ITER:
                     print '.............testing model..............'
                     imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts}
+                    val_feed_dict = {images: imgs, labels: gts, is_training: False}
                     val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
@@ -106,17 +107,17 @@ def solve(config):
                 if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
                     print '..............snapshot model.............'
                     imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts}
+                    val_feed_dict = {images: imgs, labels: gts, is_training: False}
                     val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
                     print '{}[iterations], val loss{}, val accuracy {}'.format(step, val_loss_val, val_accu)
                     saver.save(sess, osp.join(config.model_dir, 'enet_model.ckpt'), global_step=global_step)
 
-                # should we stop now ?
+                # should we stop now ? can add accuracy support later
                 if data_loader.get_epoch() == config.max_epoch + 1:
                     imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts}
+                    val_feed_dict = {images: imgs, labels: gts, is_training: False}
                     val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)

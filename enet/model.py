@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 
-def _prelu_bn(name, inputs, is_training=True, alpha_init=0.0, decay=0.1):
+def _prelu_bn(name, is_training, inputs, alpha_init=0.0, decay=0.1):
     """
     combine the batch norm and prelu together
     :param name: 
@@ -12,13 +12,13 @@ def _prelu_bn(name, inputs, is_training=True, alpha_init=0.0, decay=0.1):
     :param alpha_init: 
     :return: 
     """
-    bn = batchnorm(name+'_bn', inputs, is_training, decay)
+    bn = batchnorm(name+'_bn', is_training, inputs, decay)
     return prelu(name+'_prelu', bn, alpha_init)
 
 
 
-def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_scale=4, asy=0, dilated=0,
-                downsample=False, dropout_ratio=0.1, is_training=True, bn_decay=0.1, wd=2e-4):
+def _bottleneck_encoder(name, is_training, inputs, input_channels, output_channels, internal_scale=4, asy=0, dilated=0,
+                downsample=False, dropout_ratio=0.1, bn_decay=0.1, wd=2e-4):
     """
     :param name: 
     :param inputs: 
@@ -39,7 +39,7 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
         main_branch = conv2d(name+'_main_unit1', inputs, input_channels, internal_channels, kernel_size, kernel_size,
                       bias_var=None, wd=wd)
         # the prelu_bn unit
-        main_branch = _prelu_bn(name+'_main_unit1', main_branch, is_training, decay=bn_decay)
+        main_branch = _prelu_bn(name+'_main_unit1', is_training, main_branch, decay=bn_decay)
 
         # the conv unit according to the type
         if not asy and not dilated:
@@ -55,15 +55,14 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
                                        dilated, bias_var=None, wd=wd)
         else:
             raise Exception("Error for bottleneck {}".format(name))
-        main_branch = _prelu_bn(name+'_main_unit2', main_branch, is_training, decay=bn_decay)
+        main_branch = _prelu_bn(name+'_main_unit2', is_training, main_branch, decay=bn_decay)
 
         # the 1 x 1 to recover the ori channel num
         main_branch = conv2d(name+'_main_unit3', main_branch, internal_channels, output_channels, 1, 1,
                              bias_var=None, wd=wd)
-        main_branch = batchnorm(name+'_main_unit3_bn', main_branch, is_training, decay=bn_decay)
+        main_branch = batchnorm(name+'_main_unit3_bn', is_training, main_branch, decay=bn_decay)
         # the regularizar, spatial dropout
-        if is_training:
-            main_branch = spatial_dropout(main_branch, dropout_ratio)
+        main_branch = spatial_dropout(main_branch, is_training, dropout_ratio)
 
         # the other branch can be maxpooling and padding or nothing
         other = inputs
@@ -81,15 +80,15 @@ def _bottleneck_encoder(name, inputs, input_channels, output_channels, internal_
         return prelu(name+'_out', out)
 
 
-def _bottleneck_decoder(name, inputs, input_channels, output_channels, internal_scale=4,
-                        upsample=False, reverse_module=False, is_training=True, bn_decay=0.1, wd=2e-4):
+def _bottleneck_decoder(name, is_training, inputs, input_channels, output_channels, internal_scale=4,
+                        upsample=False, reverse_module=False, bn_decay=0.1, wd=2e-4):
     with tf.variable_scope(name) as scope:
         internal_channels = output_channels / internal_scale
 
         # the main branch
         main_branch = conv2d(name+'_main_unit1', inputs, input_channels, internal_channels,
                              1, 1, bias_var=None, wd=wd)
-        main_branch = batchnorm(name+'_main_unit1_bn', main_branch, is_training,
+        main_branch = batchnorm(name+'_main_unit1_bn', is_training, main_branch,
                                 decay=bn_decay)
         main_branch = relu(main_branch)
 
@@ -100,7 +99,7 @@ def _bottleneck_decoder(name, inputs, input_channels, output_channels, internal_
         else:
             main_branch = conv2d(name+'_main_unit2', main_branch, internal_channels,
                                  internal_channels, 3, 1, bias_var=None, wd=wd)
-        main_branch = batchnorm(name+'_main_unit2_bn', main_branch, is_training,
+        main_branch = batchnorm(name+'_main_unit2_bn', is_training, main_branch,
                                 decay=bn_decay)
         main_branch = relu(main_branch)
         # the third branch
@@ -112,12 +111,12 @@ def _bottleneck_decoder(name, inputs, input_channels, output_channels, internal_
         if input_channels != output_channels or upsample:
             other = conv2d(name+'_other_unit1', other, input_channels,
                            output_channels, 1, 1, bias_var=None, wd=wd)
-            other = batchnorm(name+'_other_unit1_bn', other, is_training, decay=bn_decay)
+            other = batchnorm(name+'_other_unit1_bn', is_training, other, decay=bn_decay)
             if upsample and reverse_module:
                 other = unpool_without_mask(other)
 
         if not upsample or reverse_module:
-            main_branch = batchnorm(name+'_main_unit3_bn', main_branch, is_training, decay=bn_decay)
+            main_branch = batchnorm(name+'_main_unit3_bn', is_training, main_branch, decay=bn_decay)
         else:
             return main_branch
 
@@ -132,30 +131,30 @@ def _initial_block(name, inputs, input_channels=3, output_channel=13, kerne=3, s
     return out
 
 
-def build_encoder(images, is_training=True, num_classes=None):
+def build_encoder(images, is_training, num_classes=None):
     # the init block
     encode = _initial_block('initial', images)
     # the bottleneck 1.0
-    encode = _bottleneck_encoder('bottleneck1.0', encode, 16, 64,
-                                 downsample=True, dropout_ratio=0.01, is_training=is_training)
+    encode = _bottleneck_encoder('bottleneck1.0', is_training, encode, 16, 64,
+                                 downsample=True, dropout_ratio=0.01)
     # the bottleneck 1.1-1.4
     for i in range(4):
-        encode = _bottleneck_encoder('bottleneck1.{}'.format(i+1), encode, 64, 64,
-                                     dropout_ratio=0.01, is_training=is_training)
+        encode = _bottleneck_encoder('bottleneck1.{}'.format(i+1), is_training, encode, 64, 64,
+                                     dropout_ratio=0.01)
     # the bottleneck2.0
-    encode = _bottleneck_encoder('bottleneck2.0', encode, 64, 128,
-                                 downsample=True, is_training=is_training)
+    encode = _bottleneck_encoder('bottleneck2.0', is_training, encode, 64, 128,
+                                 downsample=True)
 
     # the bottleneck2.1-2.8, 3.1-3.8
     for i in range(2):
-        encode = _bottleneck_encoder('bottleneck{}.1'.format(i+2), encode, 128, 128, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.2'.format(i+2), encode, 128, 128, dilated=2, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.3'.format(i+2), encode, 128, 128, asy=5, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.4'.format(i+2), encode, 128, 128, dilated=4, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.5'.format(i+2), encode, 128, 128, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.6'.format(i+2), encode, 128, 128, dilated=8, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.7'.format(i+2), encode, 128, 128, asy=5, is_training=is_training)
-        encode = _bottleneck_encoder('bottleneck{}.8'.format(i+2), encode, 128, 128, dilated=16, is_training=is_training)
+        encode = _bottleneck_encoder('bottleneck{}.1'.format(i+2), is_training, encode, 128, 128)
+        encode = _bottleneck_encoder('bottleneck{}.2'.format(i+2), is_training, encode, 128, 128, dilated=2)
+        encode = _bottleneck_encoder('bottleneck{}.3'.format(i+2), is_training, encode, 128, 128, asy=5)
+        encode = _bottleneck_encoder('bottleneck{}.4'.format(i+2), is_training, encode, 128, 128, dilated=4)
+        encode = _bottleneck_encoder('bottleneck{}.5'.format(i+2), is_training, encode, 128, 128)
+        encode = _bottleneck_encoder('bottleneck{}.6'.format(i+2), is_training, encode, 128, 128, dilated=8)
+        encode = _bottleneck_encoder('bottleneck{}.7'.format(i+2), is_training, encode, 128, 128, asy=5)
+        encode = _bottleneck_encoder('bottleneck{}.8'.format(i+2), is_training, encode, 128, 128, dilated=16)
 
     if num_classes is not None:
         # train the encoder first
@@ -166,13 +165,11 @@ def build_encoder(images, is_training=True, num_classes=None):
 
 def build_decoder(encoder, is_training=True, num_classes=20):
     # upsamle model
-    decode = _bottleneck_decoder('bottleneck4.0', encoder, 128, 64, upsample=True, reverse_module=True,
-                                 is_training=is_training)
-    decode = _bottleneck_decoder('bottleneck4.1', decode, 64, 64, is_training=is_training)
-    decode = _bottleneck_decoder('bottleneck4.2', decode, 64, 64, is_training=is_training)
-    decode = _bottleneck_decoder('bottleneck5.0', decode, 64, 16, upsample=True, reverse_module=True,
-                                 is_training=is_training)
-    decode = _bottleneck_decoder('bottleneck5.1', decode, 16, 16, is_training=is_training)
+    decode = _bottleneck_decoder('bottleneck4.0', is_training, encoder, 128, 64, upsample=True, reverse_module=True)
+    decode = _bottleneck_decoder('bottleneck4.1', is_training, decode, 64, 64)
+    decode = _bottleneck_decoder('bottleneck4.2', is_training, decode, 64, 64)
+    decode = _bottleneck_decoder('bottleneck5.0', is_training, decode, 64, 16, upsample=True, reverse_module=True)
+    decode = _bottleneck_decoder('bottleneck5.1', is_training, decode, 16, 16)
     # the output
     out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=0)
 

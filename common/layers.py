@@ -93,7 +93,7 @@ def dilated_conv(name, inputs, input_channels, output_channels, kernel, dilated_
             conv = tf.nn.bias_add(conv, bias)
         return conv
 
-def spatial_dropout(inputs, dropout_rate):
+def spatial_dropout(inputs, is_training, dropout_rate):
     """
     perform the spatial dropout to the whole feature map
     dropout ration is only performed on the channel space
@@ -103,13 +103,20 @@ def spatial_dropout(inputs, dropout_rate):
     :return:
     """
     # get a noise mask to do the dropout job, get the mask shape
-    channel_num = inputs.get_shape().as_list()[-1]
-    bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform([channel_num]), dropout_rate))
-    # mask it to the whole channel feature map, broadcasting used
-    output = tf.multiply(inputs, bernoulli_mask)
-    keep_ratio = 1 - dropout_rate
-    # rescale the input to let the val unchanged
-    output = tf.divide(output, keep_ratio)
+    def with_training():
+        channel_num = inputs.get_shape().as_list()[-1]
+        bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform([channel_num]), dropout_rate))
+        # mask it to the whole channel feature map, broadcasting used
+        output = tf.multiply(inputs, bernoulli_mask)
+        keep_ratio = 1 - dropout_rate
+        # rescale the input to let the val unchanged
+        output = tf.divide(output, keep_ratio)
+        return output
+
+    output = tf.cond(is_training,
+                     with_training,
+                     lambda: inputs
+                     )
     return output
 
 
@@ -142,15 +149,33 @@ def deconv(name, inputs, input_channels, output_channels, kernel, stride,
             conv = tf.nn.bias_add(conv, bias)
         return conv
 
-def batchnorm(name, inputs, is_training=True, decay=0.9):
+def batchnorm(name, is_training, inputs, decay=0.1):
+    """
+    self define batch normalization layer
+    :param name:
+    :param inputs:
+    :param is_training:
+    :param decay: the move momentum
+    :return:
+    """
     with tf.variable_scope(name):
-        out = tf.contrib.layers.batch_norm(inputs,
-                                           center=True,
-                                           scale=True,
-                                           is_training=is_training,
-                                           decay=decay)
+        n_out = inputs.get_shape().as_list()[-1]
+        beta = tf.Variable(tf.constant(0.0, shape=[n_out]), name='beta', trainable=True)
+        gamma = tf.Variable(tf.constant(1.0, shape=[n_out]), name='gamma', trainable=True)
+        batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2], name='moments')
+        ema = tf.train.ExponentialMovingAverage(decay=decay)
 
-        return out
+        def mean_var_with_update():
+            ema_apply_op = ema.apply([batch_mean, batch_var])
+            with tf.control_dependencies([ema_apply_op]):
+                return tf.identity(batch_mean), tf.identity(batch_var)
+
+    mean, var = tf.cond(is_training,
+                        mean_var_with_update,
+                        lambda: (ema.average(batch_mean), ema.average(batch_var)))
+    normed = tf.nn.batch_normalization(inputs, mean, var, beta, gamma, 1e-3)
+    return normed
+
 
 def relu(inputs):
     return tf.nn.relu(inputs)
