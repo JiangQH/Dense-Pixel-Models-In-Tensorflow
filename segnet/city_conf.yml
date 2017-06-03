@@ -1,20 +1,20 @@
 ## config for training
-source: ../data/train_cityscape.csv  # training file
+source: ../data/trial_cityscape.csv  # training file
 test_source: ../data/val_cityscape.csv # val file
 model_dir: ./model #path to save the model
+vgg_path: ./VGG_ILSVRC_16_layers.npy
 
 
 # training params
-batch_size: 2  # batch_size
-lr: 0.0005
+batch_size: 1  # batch_size
+lr: 0.001
 max_epoch: 100
 snapshot: 2500
 test_iter: 100
 #momentum: 0.9
 #stepsize: 50
 #gamma: 0.1
-weight_decay: 0.0002
-train_decoder: True
+weight_decay: 0.001
 label_probs: [0.36880975774750857, 0.060868740541025507, 0.22819570283385351,
         0.0065592969591914581, 0.0087829592020800731, 0.012275657265534682,
         0.0020849098115345898, 0.0055286245692937885, 0.15917384442191498,
@@ -27,8 +27,8 @@ c: 1.02
 num_classes: 20
 
 # [width, height] shape
-image_size: [512, 256]
-label_size: [512, 256]
+image_size: [224, 224]
+label_size: [224, 224]
 label_channel: 1  #the label map channel
 mean: [0, 0, 0] # image mean to sub
-display: 10
+display: 1

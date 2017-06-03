@@ -1,3 +1,10 @@
+import os
+import os.path as osp
+import sys
+parent_dir = os.getcwd()
+path = osp.dirname(parent_dir)
+sys.path.append(path)
+
 from common.layers import conv_block, max_pool_with_mask, unpool, conv2d, max_pool, norm
 import numpy as np
 import tensorflow as tf
@@ -99,7 +106,7 @@ class Model(object):
         # up1 = unpool_cpu(up2a)
         up1b = conv_block('up1', is_training, up1, 64, 64, bias_var=0.1, wd=self.config.weight_decay)
         out = conv2d(name='out', inputs=up1b, input_channels=64,
-                     output_channels=3, kernel=3, stride=1, bias_var=0.1, wd=self.config.weight_decay)
-        out_norm = norm(out)
-        return out_norm
+                     output_channels=self.config.num_classes, kernel=3, stride=1, bias_var=0.1, wd=self.config.weight_decay)
+        #out_norm = norm(out)
+        return out
 

@@ -6,7 +6,7 @@ path = osp.dirname(parent_dir)
 sys.path.append(path)
 
 from model import build_encoder, build_decoder
-from common.loss import compute_cross_entry_with_weight, compute_accuracy
+from common.loss import compute_cross_entropy_with_weight, compute_accuracy
 from common.util import load_config
 from common.dataset import BathLoader
 import tensorflow as tf
@@ -41,7 +41,7 @@ def solve(config):
         if config.train_decoder:
             encode = build_encoder(images=images, is_training=is_training)
             # load the encoder params
-            for var in tf.all_variables():
+            for var in tf.global_variables():
                 name = (var.name).split(':')[0]
                 encoder_params[name] = var
 
@@ -49,12 +49,12 @@ def solve(config):
         else:
             # only train the encoder
             out = build_encoder(images=images, is_training=is_training, num_classes=config.num_classes)
-            for var in tf.all_variables():
+            for var in tf.global_variables():
                 name = (var.name).split(':')[0]
                 encoder_params[name] = var
 
         # compute the loss and accuracy
-        loss = compute_cross_entry_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
+        loss = compute_cross_entropy_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
         accuracy = compute_accuracy(out, labels, config.invalid_label)
         # compute the accuracy
         # val_loss = compute_cross_entry()
@@ -76,6 +76,7 @@ def solve(config):
             else:
                 # find all params for encoder
                 ckpt_path = ckpt.model_checkpoint_path
+                print '----loading encoder params form {}'.format(ckpt_path)
                 encoder_saver = tf.train.Saver(encoder_params)
                 encoder_saver.restore(sess, ckpt_path)
 
@@ -99,22 +100,22 @@ def solve(config):
                 #plt.figure(2)
                 #plt.imshow(np.uint8(gts[0, ...]))
                 train_feed_dict = {images: imgs, labels: gts, is_training: True}
-                _, loss_val, train_accu = sess.run([train_op, loss, accuracy], feed_dict=train_feed_dict)
+                _, loss_train, train_accu = sess.run([train_op, loss, accuracy], feed_dict=train_feed_dict)
                 if step % config.display == 0 or step == MAX_ITER:
                     print '{}[iterations], time consumes {}, train loss {}, train accuracy {}'.format(step,
                                                                                      time.time() - local_start_time,
-                                                                                     loss_val, train_accu
+                                                                                     loss_train, train_accu
                                                                                     )
                     local_start_time = time.time()
 
-                assert not np.isnan(loss_val), 'model with loss nan'
-                train_losses.append(loss_val)
+                assert not np.isnan(loss_train), 'model with loss nan'
+                train_losses.append(loss_train)
                 train_accuracies.append(train_accu)
 
                 if step % config.test_iter == 0 or step == MAX_ITER:
                     print '.............testing model..............'
                     imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: False}
+                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
                     val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
@@ -123,7 +124,7 @@ def solve(config):
                 if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
                     print '..............snapshot model.............'
                     imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: False}
+                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
                     val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
@@ -137,7 +138,7 @@ def solve(config):
                 # should we stop now ? can add accuracy support later
                 if data_loader.get_epoch() == config.max_epoch + 1:
                     imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: False}
+                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
                     val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)

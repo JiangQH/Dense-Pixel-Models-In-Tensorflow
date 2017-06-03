@@ -26,7 +26,7 @@ def compute_dot_loss(pre, gt):
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def compute_cross_entry_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
+def compute_cross_entropy_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
     # use the weight_probs if provided, we mask the background out
     # the background is the max label
     # compute the weight mask first
@@ -44,10 +44,14 @@ def compute_cross_entry_with_weight(pre, gt, probs, invalid_label=None, c=1.02):
     mean_cross_entropy = tf.reduce_mean(weighted_cross_entropy, name='cross_entropy')
     # add to the total loss
     tf.add_to_collection('losses', mean_cross_entropy)
-
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
-
+def compute_cross_entropy(pre, gt, invalid_label=None):
+    mask = compute_mask(gt, invalid_value=invalid_label)
+    valid_cross_entropy = tf.multiply(mask, tf.nn.sparse_softmax_cross_entropy_with_logits(labels=gt, logits=pre))
+    mean_cross_entropy = tf.reduce_mean(valid_cross_entropy, name='cross_entropy')
+    tf.add_to_collection('losses', mean_cross_entropy)
+    return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
 def compute_accuracy(pre, gt, invalid_label=None):
