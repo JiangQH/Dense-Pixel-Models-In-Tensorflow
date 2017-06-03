@@ -15,6 +15,8 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 import pickle
+from common.util import colorize_cityscape
+import scipy.misc
 MAX_ITER = 9999999
 
 def solve(config):
@@ -68,15 +70,14 @@ def solve(config):
         sess_config.gpu_options.allow_growth = True
         with tf.Session(config=sess_config) as sess:
             sess.run(init_op)
-            if config.train_decoder:
-                ckpt = tf.train.get_checkpoint_state(config.model_dir)
-                if not ckpt:
-                    print 'no pre trained encoder model, train all from scratch...'
-                else:
-                    # find all params for encoder
-                    ckpt_path = ckpt.model_checkpoint_path
-                    encoder_saver = tf.train.Saver(encoder_params)
-                    encoder_saver.restore(sess, ckpt_path)
+            ckpt = tf.train.get_checkpoint_state(config.model_dir)
+            if not ckpt:
+                print 'no pre trained encoder model, train all from scratch...'
+            else:
+                # find all params for encoder
+                ckpt_path = ckpt.model_checkpoint_path
+                encoder_saver = tf.train.Saver(encoder_params)
+                encoder_saver.restore(sess, ckpt_path)
 
             # begin the training job
             print 'begin training now'
@@ -91,6 +92,9 @@ def solve(config):
                 # construct the feed dict, fetch the data
                 imgs, gts = data_loader.next_train_batch()
                 #plt.figure(1)
+                #color_map = colorize_cityscape(gts[0, ...])
+                #plt.imshow(color_map)
+                #scipy.misc.imsave('test.png', color_map)
                 #plt.imshow(np.uint8(imgs[0, ...]))
                 #plt.figure(2)
                 #plt.imshow(np.uint8(gts[0, ...]))
