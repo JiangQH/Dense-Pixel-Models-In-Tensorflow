@@ -14,7 +14,7 @@ import time
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-import simplejson
+import pickle
 MAX_ITER = 9999999
 
 def solve(config):
@@ -35,12 +35,21 @@ def solve(config):
         # images, labels= DenseInput(config).densedata_pipelines()
         # val_images, val_labels = DenseInput(config).densedata_pipelines(is_training=False)
         # infer the output according to the current stage, train the encoder or train them together
+        encoder_params = {}
         if config.train_decoder:
             encode = build_encoder(images=images, is_training=is_training)
+            # load the encoder params
+            for var in tf.all_variables():
+                name = (var.name).split(':')[0]
+                encoder_params[name] = var
+
             out = build_decoder(encoder=encode, is_training=is_training, num_classes=config.num_classes)
         else:
             # only train the encoder
             out = build_encoder(images=images, is_training=is_training, num_classes=config.num_classes)
+            for var in tf.all_variables():
+                name = (var.name).split(':')[0]
+                encoder_params[name] = var
 
         # compute the loss and accuracy
         loss = compute_cross_entry_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
@@ -51,20 +60,23 @@ def solve(config):
         global_step = tf.Variable(0, name='global_step', trainable=False)
         train_op = tf.train.AdamOptimizer(learning_rate=config.lr).minimize(loss, global_step=global_step)
 
-        # the saver
+        #for var in tf.trainable_variables():
+        #    print var
         saver = tf.train.Saver()
-        init = tf.global_variables_initializer()
+        init_op = tf.global_variables_initializer()
         sess_config = tf.ConfigProto(allow_soft_placement=True)
         sess_config.gpu_options.allow_growth = True
-
         with tf.Session(config=sess_config) as sess:
-            ckpt = tf.train.get_checkpoint_state(config.model_dir)
-            sess.run(init)
-            if not ckpt:
-                print 'no pre trained model, train all from scratch...'
-            else:
-                ckpt_path = ckpt.model_checkpoint_path
-                saver.restore(sess, ckpt_path)
+            sess.run(init_op)
+            if config.train_decoder:
+                ckpt = tf.train.get_checkpoint_state(config.model_dir)
+                if not ckpt:
+                    print 'no pre trained encoder model, train all from scratch...'
+                else:
+                    # find all params for encoder
+                    ckpt_path = ckpt.model_checkpoint_path
+                    encoder_saver = tf.train.Saver(encoder_params)
+                    encoder_saver.restore(sess, ckpt_path)
 
             # begin the training job
             print 'begin training now'
@@ -112,7 +124,11 @@ def solve(config):
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
                     print '{}[iterations], val loss{}, val accuracy {}'.format(step, val_loss_val, val_accu)
-                    saver.save(sess, osp.join(config.model_dir, 'enet_model.ckpt'), global_step=global_step)
+                    if config.train_decoder:
+                        saver.save(sess, osp.join(config.model_dir, 'decoder_model.ckpt'), global_step=global_step)
+                    else:
+                        saver.save(sess, osp.join(config.model_dir, 'encoder_model.ckpt'), global_step=global_step)
+
 
                 # should we stop now ? can add accuracy support later
                 if data_loader.get_epoch() == config.max_epoch + 1:
@@ -122,21 +138,24 @@ def solve(config):
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
                     print 'training done! with validation loss val {}, accuracy {}'.format(val_loss_val, val_accu)
-                    saver.save(sess, osp.join(config.model_dir, 'enet_model.ckpt'), global_step=global_step)
+                    if config.train_decoder:
+                        saver.save(sess, osp.join(config.model_dir, 'decoder_model.ckpt'), global_step=global_step)
+                    else:
+                        saver.save(sess, osp.join(config.model_dir, 'encoder_model.ckpt'), global_step=global_step)
                     break
 
             print 'total time comsums {}'.format(time.time() - start_time)
-            with open('train_loss_log.txt', 'w') as f:
-                simplejson.dump(train_losses, f)
+            with open('train_loss_log.txt', 'wb') as f:
+                pickle.dump(train_losses, f)
                 f.close()
-            with open('train_accu_log.txt', 'w') as f:
-                simplejson.dump(train_accuracies, f)
+            with open('train_accu_log.txt', 'wb') as f:
+                pickle.dump(train_accuracies, f)
                 f.close()
-            with open('val_loss_log.txt', 'w') as f:
-                simplejson.dump(val_losses, f)
+            with open('val_loss_log.txt', 'wb') as f:
+                pickle.dump(val_losses, f)
                 f.close()
-            with open('val_accu_log.txt', 'w') as f:
-                simplejson.dump(accuracies, f)
+            with open('val_accu_log.txt', 'wb') as f:
+                pickle.dump(accuracies, f)
                 f.close()
             sess.close()
 
