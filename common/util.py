@@ -73,5 +73,13 @@ def colorize_cityscape(labels):
     return city_color_map[labels]
 
 
+def uniform_normal(labels):
+    labels = (labels / 255.0 - 0.5) * 2.0
+    return labels
+
+def colorize_normal(labels):
+    labels = (labels / 2.0 + 0.5) * 255
+    return np.uint8(labels)
+
 
 

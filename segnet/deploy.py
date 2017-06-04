@@ -16,6 +16,7 @@ from common.util import colorize_cityscape
 import argparse
 import scipy.misc
 from PIL import Image
+import matplotlib.pyplot as plt
 
 IMAGE_HEIGHT = 512
 IMAGE_WIDTH = 1024
@@ -55,6 +56,8 @@ def deploy(imgs, out_dir, model_path, use_decoder=False):
                     # save it
                     for i in range(count):
                         pre = pres[i, ...]
+                        #plt.figure(1)
+                        #plt.imshow(pre)
                         pre = colorize_cityscape(pre)
                         out_name = out_names[i]
                         #plt.figure(1)

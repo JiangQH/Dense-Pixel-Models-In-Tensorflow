@@ -1,4 +1,4 @@
-from common.layers import conv2d, batchnorm, prelu, dilated_conv, max_pool, spatial_dropout, relu, deconv, unpool_without_mask
+from common.layers import conv2d, batchnorm, prelu, dilated_conv, max_pool, spatial_dropout, relu, deconv, unpool_without_mask, norm
 import tensorflow as tf
 
 
@@ -133,7 +133,8 @@ def _initial_block(name, inputs, input_channels=3, output_channel=13, kerne=3, s
 
 def build_encoder(images, is_training, num_classes=None):
     # the init block
-    norm_weight_init = tf.truncated_normal_initializer(0.001)
+    # norm_weight_init = tf.truncated_normal_initializer(0.001)
+    norm_weight_init = 'xavier'
     encode = _initial_block('initial', images, weight_init=norm_weight_init)
     # the bottleneck 1.0
     encode = _bottleneck_encoder('bottleneck1.0', is_training, encode, 16, 64,
@@ -160,20 +161,22 @@ def build_encoder(images, is_training, num_classes=None):
     if num_classes is not None:
         # train the encoder first
         encode = conv2d('prediction', encode, 128, num_classes, 1, 1, bias_var=0.1, wd=0, weight_initializer=norm_weight_init)
+        encode = norm(encode)
 
     return encode
 
 
 def build_decoder(encoder, is_training=True, num_classes=20):
     # upsamle model
-    norm_weight_init = tf.truncated_normal_initializer(0.001)
+    # norm_weight_init = tf.truncated_normal_initializer(0.001)
+    norm_weight_init = 'xavier'
     decode = _bottleneck_decoder('bottleneck4.0', is_training, encoder, 128, 64, upsample=True, reverse_module=True, weight_init=norm_weight_init)
     decode = _bottleneck_decoder('bottleneck4.1', is_training, decode, 64, 64, weight_init=norm_weight_init)
     decode = _bottleneck_decoder('bottleneck4.2', is_training, decode, 64, 64, weight_init=norm_weight_init)
     decode = _bottleneck_decoder('bottleneck5.0', is_training, decode, 64, 16, upsample=True, reverse_module=True, weight_init=norm_weight_init)
     decode = _bottleneck_decoder('bottleneck5.1', is_training, decode, 16, 16, weight_init=norm_weight_init)
     # the output
-    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=0, weight_initializer=norm_weight_init)
+    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=2e-4, weight_initializer=norm_weight_init)
 
     return out
 

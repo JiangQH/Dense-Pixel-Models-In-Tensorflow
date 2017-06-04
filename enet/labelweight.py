@@ -5,7 +5,7 @@ import numpy as np
 import scipy.misc
 import json
 
-Data_dir = '/media/jqh/My Passport/Private/dataset/cityscapes/cityscapesScripts-master/gtFine/train'
+Data_dir = '/home/qinhong/project/dataset/cityscape/label/train/'
 def compute_lable_weight():
     cities = os.listdir(Data_dir)
     fres = {}
@@ -22,8 +22,8 @@ def compute_lable_weight():
                 #plt.imshow(data)
                 uniques, counts = np.unique(data, return_counts=True)
                 for i in range(len(uniques)):
-                    if uniques[i] == 19:
-                        continue
+                    #if uniques[i] == 19:
+                    #    continue
                     if uniques[i] not in fres:
                         fres[uniques[i]] = 0
                     fres[uniques[i]] += counts[i]
@@ -31,7 +31,9 @@ def compute_lable_weight():
     # save to disk
     probs = []
     for label in fres:
-        probs.append(fres[label] / (total_count * 1.0))
+        prob = fres[label] / (total_count * 1.0)
+        print '{} : {}'.format(label, prob)
+        probs.append(prob)
     with open('cityscape.txt', 'w') as fp:
         json.dump(probs, fp)
 

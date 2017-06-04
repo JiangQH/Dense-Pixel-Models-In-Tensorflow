@@ -8,7 +8,7 @@ model_dir: ./nyu_model
 batch_size: 10  # batch_size
 #test_batch: 10
 lr: 0.0005
-max_epoch: 80
+max_epoch: 800
 test_iter: 50
 #momentum: 0.9
 #stepsize: 50

@@ -6,7 +6,7 @@ def compute_euclidean_loss(pre, gt):
     # batch, height, width, channel = pre.get_shape().as_list()
     mask = compute_mask(gt, invalid_value=127)
     # should we rescale the gt ?
-    gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
+    # gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
     gt_masked = tf.multiply(gt, mask)
     pre_masked = tf.multiply(pre, mask)
     #gt_masked = tf.multiply(gt, mask)
@@ -22,7 +22,7 @@ def compute_euclidean_loss(pre, gt):
 
 def compute_dot_loss(pre, gt):
     mask = compute_mask(gt, invalid_value=127)
-    gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
+    # gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
     gt_masked = tf.multiply(gt, mask)
     dots = tf.reduce_sum(tf.multiply(pre, gt_masked))
     total_count = tf.reduce_sum(mask)

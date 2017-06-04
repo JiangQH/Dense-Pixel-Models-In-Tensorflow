@@ -27,10 +27,10 @@ def deploy(imgs, out_dir, model_path, use_decoder=False):
                                                          3])
         is_training = tf.placeholder(dtype=tf.bool, name='is_training')
         if use_decoder:
-        	encode = build_encoder(images=images, is_training=is_training)
-        	out = build_decoder(encoder=encode, is_training=is_training, num_classes=NUM_CLASSES)
+            encode = build_encoder(images=images, is_training=is_training)
+            out = build_decoder(encoder=encode, is_training=is_training, num_classes=NUM_CLASSES)
         else:
-        	out = build_encoder(images=images, is_training=is_training, num_classes=NUM_CLASSES)
+            out = build_encoder(images=images, is_training=is_training, num_classes=NUM_CLASSES)
 
         predictions = tf.argmax(out, axis=3)
         sess_config = tf.ConfigProto(allow_soft_placement=True)
@@ -88,10 +88,12 @@ def main(args):
     parser = build_parser()
     args = parser.parse_args()
     indir = args.in_dir
-    imgs = [osp.join(indir, f) for f in os.listdir(indir)]
+    #imgs = [osp.join(indir, f) for f in os.listdir(indir)]
+    lines = [line.rstrip('\n') for line in open('../data/trial_cityscape.csv', 'r')]
+    imgs = [line.split(',')[0] for line in lines]
     if not osp.exists(args.out_dir):
-    	os.mkdir(args.out_dir)
-    deploy(imgs, args.out_dir, args.model_path, use_decoder=True)
+        os.mkdir(args.out_dir)
+    deploy(imgs, args.out_dir, args.model_path, use_decoder=False)
 
 if __name__ == '__main__':
     tf.app.run()
