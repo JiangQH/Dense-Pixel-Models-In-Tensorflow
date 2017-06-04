@@ -13,28 +13,31 @@ from PIL import Image
 import scipy.misc
 import argparse
 import matplotlib.pyplot as plt
+from common.util import colorize_cityscape
 
-IMAGE_HEIGHT = 256
-IMAGE_WIDTH = 512
+IMAGE_HEIGHT = 512
+IMAGE_WIDTH = 1024
 BATCH_SIZE = 4
 NUM_CLASSES = 20
 
-def deploy_encoder(imgs, out_dir, model_dir):
+def deploy(imgs, out_dir, model_path, use_decoder=False):
     with tf.Graph().as_default() as g:
         images = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE,
                                                          IMAGE_HEIGHT, IMAGE_WIDTH,
                                                          3])
-        out = build_encoder(images, is_training=False, num_classes=NUM_CLASSES)
+        is_training = tf.placeholder(dtype=tf.bool, name='is_training')
+        if use_decoder:
+        	encode = build_encoder(images=images, is_training=is_training)
+        	out = build_decoder(encoder=encode, is_training=is_training, num_classes=NUM_CLASSES)
+        else:
+        	out = build_encoder(images=images, is_training=is_training, num_classes=NUM_CLASSES)
+
         predictions = tf.argmax(out, axis=3)
         sess_config = tf.ConfigProto(allow_soft_placement=True)
         sess_config.gpu_options.allow_growth = True
         saver = tf.train.Saver()
         with tf.Session(config=sess_config) as sess:
-            ckpt = tf.train.get_checkpoint_state(model_dir)
-            if not ckpt:
-                raise Exception('No pretrained model...')
-            ckpt_path = ckpt.model_checkpoint_path
-            saver.restore(sess, ckpt_path)
+            saver.restore(sess, model_path)
             in_data = np.zeros((BATCH_SIZE, IMAGE_HEIGHT, IMAGE_WIDTH, 3), dtype=np.float32)
             count = 0
             out_names = []
@@ -50,10 +53,11 @@ def deploy_encoder(imgs, out_dir, model_dir):
                 # should we forward ?
                 if count == BATCH_SIZE:
                     start = time.time()
-                    pres = predictions.eval(session=sess, feed_dict={images: in_data})
+                    pres = predictions.eval(session=sess, feed_dict={images: in_data, is_training:False})
                     # save it
                     for i in range(count):
                         pre = pres[i, ...]
+                        pre = colorize_cityscape(pre)
                         out_name = out_names[i]
                         #plt.figure(1)
                         #plt.imshow(pre)
@@ -63,9 +67,10 @@ def deploy_encoder(imgs, out_dir, model_dir):
                     out_names = []
                     count = 0
             # the remaining forward
-            pres = predictions.eval(session=sess, feed_dict={images: in_data})
+            pres = predictions.eval(session=sess, feed_dict={images: in_data, is_training:False})
             for i in range(count):
                 pre = pres[i, ...]
+                pre = colorize_cityscape(pre)
                 out_name = out_names[i]
                 scipy.misc.imsave(out_name, pre)
 
@@ -73,9 +78,9 @@ def deploy_encoder(imgs, out_dir, model_dir):
 
 def build_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--in_dir', '-i', default='/media/jqh/My Passport/Private/dataset/cityscapes/trial/rgb', help='path to input dir')
+    parser.add_argument('--in_dir', '-i', default='/home/qinhong/project/dataset/cityscape/rgb/test/bonn/', help='path to input dir')
     parser.add_argument('--out_dir', '-o', default='./output', help='path to the output dir')
-    parser.add_argument('--model_dir', '-m', default='./model', help='path to the model dir')
+    parser.add_argument('--model_path', '-m', required=True, help='path to the model dir')
     return parser
 
 
@@ -84,7 +89,9 @@ def main(args):
     args = parser.parse_args()
     indir = args.in_dir
     imgs = [osp.join(indir, f) for f in os.listdir(indir)]
-    deploy_encoder(imgs, args.out_dir, args.model_dir)
+    if not osp.exists(args.out_dir):
+    	os.mkdir(args.out_dir)
+    deploy(imgs, args.out_dir, args.model_path, use_decoder=True)
 
 if __name__ == '__main__':
     tf.app.run()

@@ -173,7 +173,7 @@ def build_decoder(encoder, is_training=True, num_classes=20):
     decode = _bottleneck_decoder('bottleneck5.0', is_training, decode, 64, 16, upsample=True, reverse_module=True, weight_init=norm_weight_init)
     decode = _bottleneck_decoder('bottleneck5.1', is_training, decode, 16, 16, weight_init=norm_weight_init)
     # the output
-    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=0, weight_init=norm_weight_init)
+    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=0, weight_initializer=norm_weight_init)
 
     return out
 

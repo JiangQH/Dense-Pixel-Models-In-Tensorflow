@@ -5,59 +5,92 @@ parent_dir = os.getcwd()
 path = osp.dirname(parent_dir)
 sys.path.append(path)
 
-import tensorflow as tf
 from model import Model
-import os
-import os.path as osp
-import numpy as np
-from PIL import Image
-import scipy.misc
+from common.dataset import BathLoader
+from common.loss import compute_dot_loss, compute_euclidean_loss, compute_accuracy, compute_cross_entropy, compute_cross_entropy_with_weight
+from common.util import load_config
+import tensorflow as tf
 import time
+import numpy as np
+from common.util import colorize_cityscape
 import argparse
-def deploy(in_dir, out_dir, model_dir):
+import scipy.misc
+from PIL import Image
+
+IMAGE_HEIGHT = 512
+IMAGE_WIDTH = 1024
+BATCH_SIZE = 4
+NUM_CLASSES = 20
+
+def deploy(imgs, out_dir, model_path, use_decoder=False):
     with tf.Graph().as_default() as g:
-        datas = tf.placeholder(tf.float32)
-        predictions = Model().inference(datas, is_training=False)
+        images = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE,
+                                                         IMAGE_HEIGHT, IMAGE_WIDTH,
+                                                         3])
+        is_training = tf.placeholder(dtype=tf.bool, name='is_training')
+        out = Model().inference(images, is_training)
+        predictions = tf.argmax(out, axis=3)
 
-        config = tf.ConfigProto(allow_soft_placement=True)
-        config.gpu_options.allow_growth = True
-        sess = tf.Session(config=config)
-
+        sess_config = tf.ConfigProto(allow_soft_placement=True)
+        sess_config.gpu_options.allow_growth = True
         saver = tf.train.Saver()
-        ckpt = tf.train.get_checkpoint_state(model_dir)
-        if ckpt and ckpt.model_checkpoint_path:
-            print 'restoring model prams, loading....'
-            saver.restore(sess, ckpt.model_checkpoint_path)
-        else:
-            raise Exception('No pretrained model, check it...')
+        with tf.Session(config=sess_config) as sess:
+            saver.restore(sess, model_path)
+            in_data = np.zeros((BATCH_SIZE, IMAGE_HEIGHT, IMAGE_WIDTH, 3), dtype=np.float32)
+            count = 0
+            out_names = []
+            for img in imgs:
+                basename = osp.basename(img)
+                out_name = osp.join(out_dir, basename)
+                print basename
+                image_data = scipy.misc.imresize(Image.open(img), (IMAGE_HEIGHT, IMAGE_WIDTH))
+                image_data = np.asarray(image_data, dtype=np.float32)
+                in_data[count, ...] = image_data
+                out_names.append(out_name)
+                count += 1
+                # should we forward ?
+                if count == BATCH_SIZE:
+                    start = time.time()
+                    pres = predictions.eval(session=sess, feed_dict={images: in_data, is_training:False})
+                    # save it
+                    for i in range(count):
+                        pre = pres[i, ...]
+                        pre = colorize_cityscape(pre)
+                        out_name = out_names[i]
+                        #plt.figure(1)
+                        #plt.imshow(pre)
+                        scipy.misc.imsave(out_name, pre)
+                    print 'forwading done with {}'.format(time.time() - start)
+                    # reset data
+                    out_names = []
+                    count = 0
+            # the remaining forward
+            pres = predictions.eval(session=sess, feed_dict={images: in_data, is_training:False})
+            for i in range(count):
+                pre = pres[i, ...]
+                pre = colorize_cityscape(pre)
+                out_name = out_names[i]
+                scipy.misc.imsave(out_name, pre)
 
-        # now do the feed job
-        start_time = time.time()
-        print 'begin forwarding...'
-        in_images = os.listdir(in_dir)
-        for im_name in in_images:
-            print im_name
-            in_image = osp.join(in_dir, im_name)
-            out_image = osp.join(out_dir, im_name)
-            image_data = np.asarray(Image.open(in_image), dtype=np.float32)
-            pre = predictions.eval(session=sess, feed_dict={datas: image_data})
-            # save it
-            scipy.misc.imsave(out_image, np.uint8((pre/2 + 0.5) * 255))
-        print 'handling done, time consumes {}'.format(time.time() - start_time)
-
+            sess.close()
 
 def build_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--in_dir', '-i', default='/home/qinhong/project/segnet_depth/data/test/mini_data', help='path to input dir')
+    parser.add_argument('--in_dir', '-i', default='/home/qinhong/project/dataset/cityscape/rgb/test/bonn/', help='path to input dir')
     parser.add_argument('--out_dir', '-o', default='./output', help='path to the output dir')
-    parser.add_argument('--model_dir', '-m', required=True, help='path to the model dir')
+    parser.add_argument('--model_path', '-m', required=True, help='path to the model dir')
     return parser
 
 
 def main(args):
     parser = build_parser()
     args = parser.parse_args()
-    deploy(args.in_dir, args.out_dir, args.model_dir)
+    indir = args.in_dir
+    imgs = [osp.join(indir, f) for f in os.listdir(indir)]
+    if not osp.exists(args.out_dir):
+        os.mkdir(args.out_dir)
+    deploy(imgs, args.out_dir, args.model_path, use_decoder=True)
 
 if __name__ == '__main__':
     tf.app.run()
+
