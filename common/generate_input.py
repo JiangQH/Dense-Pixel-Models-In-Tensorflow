@@ -50,3 +50,6 @@ def generate_cityscape(image_path, label_path, out_name):
             f.write("\n")
         f.close()
     print 'saving done! as {}'.format(out_name)
+
+
+#incode_csv('/home/jqh/workdir/project/segnet_depth/data/mini/rgb', '/home/jqh/workdir/project/segnet_depth/data/mini/normal_map', 'trial_nyu.csv')

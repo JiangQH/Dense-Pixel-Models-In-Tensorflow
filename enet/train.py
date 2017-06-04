@@ -6,7 +6,7 @@ path = osp.dirname(parent_dir)
 sys.path.append(path)
 
 from model import build_encoder, build_decoder
-from common.loss import compute_cross_entropy_with_weight, compute_accuracy
+from common.loss import compute_cross_entropy_with_weight, compute_accuracy, compute_dot_loss, compute_euclidean_loss
 from common.util import load_config
 from common.dataset import BathLoader
 import tensorflow as tf
@@ -44,7 +44,6 @@ def solve(config):
             for var in tf.global_variables():
                 name = (var.name).split(':')[0]
                 encoder_params[name] = var
-
             out = build_decoder(encoder=encode, is_training=is_training, num_classes=config.num_classes)
         else:
             # only train the encoder
@@ -54,8 +53,9 @@ def solve(config):
                 encoder_params[name] = var
 
         # compute the loss and accuracy
-        loss = compute_cross_entropy_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
-        accuracy = compute_accuracy(out, labels, config.invalid_label)
+        #loss = compute_cross_entropy_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
+        #accuracy = compute_accuracy(out, labels, config.invalid_label)
+        loss = compute_euclidean_loss(out, labels)
         # compute the accuracy
         # val_loss = compute_cross_entry()
         # the train op
@@ -92,15 +92,8 @@ def solve(config):
             for step in xrange(MAX_ITER + 1):
                 # construct the feed dict, fetch the data
                 imgs, gts = data_loader.next_train_batch()
-                #plt.figure(1)
-                #color_map = colorize_cityscape(gts[0, ...])
-                #plt.imshow(color_map)
-                #scipy.misc.imsave('test.png', color_map)
-                #plt.imshow(np.uint8(imgs[0, ...]))
-                #plt.figure(2)
-                #plt.imshow(np.uint8(gts[0, ...]))
                 train_feed_dict = {images: imgs, labels: gts, is_training: True}
-                _, loss_train, train_accu = sess.run([train_op, loss, accuracy], feed_dict=train_feed_dict)
+                _, loss_train, train_accu = sess.run([train_op, loss], feed_dict=train_feed_dict)
                 if step % config.display == 0 or step == MAX_ITER:
                     print '{}[iterations], time consumes {}, train loss {}, train accuracy {}'.format(step,
                                                                                      time.time() - local_start_time,
@@ -112,23 +105,24 @@ def solve(config):
                 train_losses.append(loss_train)
                 train_accuracies.append(train_accu)
 
-                if step % config.test_iter == 0 or step == MAX_ITER:
+                if hasattr(config, 'test_source') and (step % config.test_iter == 0 or step == MAX_ITER):
                     print '.............testing model..............'
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                    val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
+                    val_accu, val_loss_val = sess.run([loss], feed_dict=val_feed_dict)
                     accuracies.append(val_accu)
                     val_losses.append(val_loss_val)
                     print '{}[iterations], val loss {}, val accuracy {}'.format(step, val_loss_val, val_accu)
 
                 if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
                     print '..............snapshot model.............'
-                    imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                    val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    accuracies.append(val_accu)
-                    val_losses.append(val_loss_val)
-                    print '{}[iterations], val loss{}, val accuracy {}'.format(step, val_loss_val, val_accu)
+                    if hasattr(config, 'test_source'):
+                        imgs, gts = data_loader.next_val_batch()
+                        val_feed_dict = {images: imgs, labels: gts, is_training: True}
+                        val_accu, val_loss_val = sess.run([loss], feed_dict=val_feed_dict)
+                        accuracies.append(val_accu)
+                        val_losses.append(val_loss_val)
+                        print '{}[iterations], val loss{}, val accuracy {}'.format(step, val_loss_val, val_accu)
                     if config.train_decoder:
                         saver.save(sess, osp.join(config.model_dir, 'decoder_model.ckpt'), global_step=global_step)
                     else:
@@ -137,12 +131,13 @@ def solve(config):
 
                 # should we stop now ? can add accuracy support later
                 if data_loader.get_epoch() == config.max_epoch + 1:
-                    imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                    val_accu, val_loss_val = sess.run([accuracy, loss], feed_dict=val_feed_dict)
-                    accuracies.append(val_accu)
-                    val_losses.append(val_loss_val)
-                    print 'training done! with validation loss val {}, accuracy {}'.format(val_loss_val, val_accu)
+                    if hasattr(config, 'test_source'):
+                        imgs, gts = data_loader.next_val_batch()
+                        val_feed_dict = {images: imgs, labels: gts, is_training: True}
+                        val_accu, val_loss_val = sess.run([loss], feed_dict=val_feed_dict)
+                        accuracies.append(val_accu)
+                        val_losses.append(val_loss_val)
+                        print '{}[iterations], val loss{}, val accuracy {}'.format(step, val_loss_val, val_accu)
                     if config.train_decoder:
                         saver.save(sess, osp.join(config.model_dir, 'decoder_model.ckpt'), global_step=global_step)
                     else:
@@ -156,12 +151,13 @@ def solve(config):
             with open('train_accu_log.txt', 'wb') as f:
                 pickle.dump(train_accuracies, f)
                 f.close()
-            with open('val_loss_log.txt', 'wb') as f:
-                pickle.dump(val_losses, f)
-                f.close()
-            with open('val_accu_log.txt', 'wb') as f:
-                pickle.dump(accuracies, f)
-                f.close()
+            if hasattr(config, 'test_source'):
+                with open('val_loss_log.txt', 'wb') as f:
+                    pickle.dump(val_losses, f)
+                    f.close()
+                with open('val_accu_log.txt', 'wb') as f:
+                    pickle.dump(accuracies, f)
+                    f.close()
             sess.close()
 
 

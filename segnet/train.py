@@ -78,7 +78,8 @@ def solve(config):
                 train_losses.append(loss_train)
                 train_accuracies.append(train_accu)
 
-                if step % config.test_iter == 0 or step == MAX_ITER:
+
+                if hasattr(config, 'test_source') and (step % config.test_iter == 0 or step == MAX_ITER):
                     print '.............testing model..............'
                     imgs, gts = data_loader.next_val_batch()
                     val_feed_dict = {images: imgs, labels: gts, is_training: True}
@@ -89,22 +90,24 @@ def solve(config):
 
                 if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
                     print '..............snapshot model.............'
-                    imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                    loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
-                    val_losses.append(loss_val)
-                    accuracies.append(val_accu)
-                    print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
+                    if hasattr(config, 'test_source'):
+                        imgs, gts = data_loader.next_val_batch()
+                        val_feed_dict = {images: imgs, labels: gts, is_training: True}
+                        loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
+                        val_losses.append(loss_val)
+                        accuracies.append(val_accu)
+                        print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
                     saver.save(sess, osp.join(config.model_dir, 'segnet_model.ckpt'), global_step=global_step)
 
                 # should we stop now ? can add accuracy support later
                 if data_loader.get_epoch() == config.max_epoch + 1:
-                    imgs, gts = data_loader.next_val_batch()
-                    val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                    loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
-                    val_losses.append(loss_val)
-                    accuracies.append(val_accu)
-                    print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
+                    if hasattr(config, 'test_source'):
+                        imgs, gts = data_loader.next_val_batch()
+                        val_feed_dict = {images: imgs, labels: gts, is_training: True}
+                        loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
+                        val_losses.append(loss_val)
+                        accuracies.append(val_accu)
+                        print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
                     saver.save(sess, osp.join(config.model_dir, 'segnet_model.ckpt'), global_step=global_step)
                     break
 
@@ -115,12 +118,13 @@ def solve(config):
             with open('train_accu_log.txt', 'wb') as f:
                 pickle.dump(train_accuracies, f)
                 f.close()
-            with open('val_loss_log.txt', 'wb') as f:
-                pickle.dump(val_losses, f)
-                f.close()
-            with open('val_accu_log.txt', 'wb') as f:
-                pickle.dump(accuracies, f)
-                f.close()
+            if hasattr(config, 'test_source'):
+                with open('val_loss_log.txt', 'wb') as f:
+                    pickle.dump(val_losses, f)
+                    f.close()
+                with open('val_accu_log.txt', 'wb') as f:
+                    pickle.dump(accuracies, f)
+                    f.close()
             sess.close()
 
 

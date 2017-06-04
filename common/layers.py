@@ -4,7 +4,7 @@ from tensorflow.python.framework import ops
 
 import numbers
 
-def _get_weights_stddev(shape, type='xavier'):
+def _get_weights_initializer(shape, type='xavier', uniform=True):
     """
     get the weight stddev by the kernel shape
     :param shape:
@@ -22,12 +22,13 @@ def _get_weights_stddev(shape, type='xavier'):
             receiptive *= dim
         fan_in = receiptive * shape[-2]
         fan_out = receiptive * shape[-1]
-    scale = 1.0 / tf.maximum(1.0, (fan_in + fan_out) / 2.0)
-    if type == 'xavier':
-        stddev = tf.sqrt(scale)
+    scale = 1.0 / tf.maximum(1.0, (fan_in + fan_out) / 3.0)
+    if uniform:
+        init_range = tf.sqrt(scale * 2.0)
+        return tf.random_uniform_initializer(-init_range, init_range)
     else:
-        raise Exception('unknown weights init type {}'.format(type))
-    return stddev
+        stddev = tf.sqrt(scale)
+        return tf.truncated_normal_initializer(stddev)
 
 def _get_variable(name, shape, initializer):
     var = tf.get_variable(name, shape, initializer=initializer, dtype=tf.float32)
@@ -44,8 +45,7 @@ def _weights_with_weight_decay(name, shape, wd, w_initializer):
         raise Exception('weight initializer must be str or number')
     """
     if w_initializer == 'xavier':
-        stddev = _get_weights_stddev(shape, w_initializer)
-        initializer = tf.truncated_normal_initializer(stddev=stddev)
+        initializer = _get_weights_initializer(shape, w_initializer)
     else:
         initializer = w_initializer
 

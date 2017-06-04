@@ -43,9 +43,10 @@ def compute_mask(label_tensor, invalid_value=0):
         mask = tf.cast(tf.not_equal(label_tensor, invalid_value), tf.float32)
     else:
         batch, height, width, channel = shapes
-        summing = tf.zeros([batch, height, width], tf.float32)
+        summing = tf.zeros([batch, height, width, 1], tf.float32)
         splits = tf.split(label_tensor, num_or_size_splits=channel, axis=3)
         for split in splits:
+            #split = tf.squeeze(split, axis=3)
             split_mask = tf.cast(tf.not_equal(split, invalid_value), tf.float32)
             summing = tf.add(summing, split_mask)
         mask = tf.cast(tf.not_equal(summing, 0), tf.float32)

@@ -5,10 +5,13 @@ def compute_euclidean_loss(pre, gt):
     # reshape
     # batch, height, width, channel = pre.get_shape().as_list()
     mask = compute_mask(gt, invalid_value=127)
+    # should we rescale the gt ?
+    gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
+    gt_masked = tf.multiply(gt, mask)
     pre_masked = tf.multiply(pre, mask)
     #gt_masked = tf.multiply(gt, mask)
     #rgb_masked = tf.multiply(rgb, mask)
-    total_loss = tf.reduce_sum(tf.square(tf.subtract(pre_masked, gt)))
+    total_loss = tf.reduce_sum(tf.square(tf.subtract(pre_masked, gt_masked)))
     # total_count = tf.divide(tf.reduce_sum(mask_num), channel)
     total_count = tf.reduce_sum(mask)
     # get the loss including the weight decay loss
@@ -19,7 +22,9 @@ def compute_euclidean_loss(pre, gt):
 
 def compute_dot_loss(pre, gt):
     mask = compute_mask(gt, invalid_value=127)
-    dots = tf.reduce_sum(tf.multiply(pre, gt))
+    gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
+    gt_masked = tf.multiply(gt, mask)
+    dots = tf.reduce_sum(tf.multiply(pre, gt_masked))
     total_count = tf.reduce_sum(mask)
     loss = tf.multiply(tf.divide(dots, total_count), -1)
     tf.add_to_collection('losses', loss)
