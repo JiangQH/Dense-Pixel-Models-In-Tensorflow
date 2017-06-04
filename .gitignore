@@ -6,3 +6,6 @@
 *model
 *output
 *out_deploy
+*label_log
+*.yml
+
