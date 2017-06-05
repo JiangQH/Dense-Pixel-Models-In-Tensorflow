@@ -18,7 +18,7 @@ from common.util import colorize_cityscape
 IMAGE_HEIGHT = 512
 IMAGE_WIDTH = 1024
 BATCH_SIZE = 4
-NUM_CLASSES = 20
+NUM_CLASSES = 19
 
 def deploy(imgs, out_dir, model_path, use_decoder=False):
     with tf.Graph().as_default() as g:

@@ -52,18 +52,12 @@ def solve(config):
                 name = (var.name).split(':')[0]
                 encoder_params[name] = var
 
-        # compute the loss and accuracy
-        #loss = compute_cross_entropy_with_weight(out, labels, config.label_probs, config.invalid_label, config.c)
-        #accuracy = compute_accuracy(out, labels, config.invalid_label)
+
         loss = compute_euclidean_loss(out, labels, config.invalid_label)
-        # compute the accuracy
-        # val_loss = compute_cross_entry()
-        # the train op
+
         global_step = tf.Variable(0, name='global_step', trainable=False)
         train_op = tf.train.AdamOptimizer(learning_rate=config.lr).minimize(loss, global_step=global_step)
 
-        #for var in tf.trainable_variables():
-        #    print var
         saver = tf.train.Saver(max_to_keep=None)
         init_op = tf.global_variables_initializer()
         sess_config = tf.ConfigProto(allow_soft_placement=True)
@@ -93,7 +87,7 @@ def solve(config):
                 # rescale the gts
                 gts = uniform_normal(gts)
                 train_feed_dict = {images: imgs, labels: gts, is_training: True}
-                _, loss_train, preds = sess.run([train_op, loss, out], feed_dict=train_feed_dict)
+                _, loss_train = sess.run([train_op, loss], feed_dict=train_feed_dict)
 
                 if step % config.display == 0 or step == MAX_ITER:
                     print '{}[iterations], time consumes {}, train loss {}'.format(step,
@@ -107,14 +101,14 @@ def solve(config):
 
 
                 if hasattr(config, 'test_source') and (step % config.test_iter == 0 or step == MAX_ITER):
-                    print '.............testing model..............'
+                    print '..........................testing model............................'
                     imgs, gts = data_loader.next_val_batch()
                     gts = uniform_normal(gts)
                     val_feed_dict = {images: imgs, labels: gts, is_training: True}
                     val_loss_val = sess.run([loss], feed_dict=val_feed_dict)
 
                     val_losses.append(val_loss_val)
-                    print '{}[iterations], val loss {}'.format(step, val_loss_val)
+                    print '{}[iterations], ..................with val loss {}'.format(step, val_loss_val)
 
                 if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
                     print '..............snapshot model.............'
@@ -125,7 +119,7 @@ def solve(config):
                         val_loss_val = sess.run([loss], feed_dict=val_feed_dict)
 
                         val_losses.append(val_loss_val)
-                        print '{}[iterations], val loss {}'.format(step, val_loss_val)
+                        print '{}[iterations], with val loss {}'.format(step, val_loss_val)
                     if config.train_decoder:
                         saver.save(sess, osp.join(config.model_dir, 'decoder_model.ckpt'), global_step=global_step)
                     else:
@@ -142,7 +136,7 @@ def solve(config):
                         # val_loss_val = sess.run([loss], feed_dict=val_feed_dict)
                         # accuracies.append(val_accu)
                         val_losses.append(val_loss_val)
-                        print '{}[iterations], val loss {}'.format(step, val_loss_val)
+                        print '{}[iterations], with val loss {}'.format(step, val_loss_val)
                     if config.train_decoder:
                         saver.save(sess, osp.join(config.model_dir, 'decoder_model.ckpt'), global_step=global_step)
                     else:

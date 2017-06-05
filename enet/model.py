@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 
-def _prelu_bn(name, is_training, inputs, alpha_init=0.0, decay=0.1):
+def _prelu_bn(name, is_training, inputs, alpha_init=0.0, decay=0.99):
     """
     combine the batch norm and prelu together
     :param name: 
@@ -18,7 +18,7 @@ def _prelu_bn(name, is_training, inputs, alpha_init=0.0, decay=0.1):
 
 
 def _bottleneck_encoder(name, is_training, inputs, input_channels, output_channels, internal_scale=4, asy=0, dilated=0,
-                downsample=False, dropout_ratio=0.1, bn_decay=0.1, wd=2e-4, weight_init='xavier'):
+                downsample=False, dropout_ratio=0.1, bn_decay=0.99, wd=2e-4, weight_init='xavier'):
     """
     :param name: 
     :param inputs: 
@@ -81,7 +81,7 @@ def _bottleneck_encoder(name, is_training, inputs, input_channels, output_channe
 
 
 def _bottleneck_decoder(name, is_training, inputs, input_channels, output_channels, internal_scale=4,
-                        upsample=False, reverse_module=False, bn_decay=0.1, wd=2e-4, weight_init='xavier'):
+                        upsample=False, reverse_module=False, bn_decay=0.99, wd=2e-4, weight_init='xavier'):
     with tf.variable_scope(name) as scope:
         internal_channels = output_channels / internal_scale
 
