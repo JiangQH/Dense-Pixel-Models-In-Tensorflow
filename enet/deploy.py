@@ -93,7 +93,7 @@ def main(args):
     imgs = [line.split(',')[0] for line in lines]
     if not osp.exists(args.out_dir):
         os.mkdir(args.out_dir)
-    deploy(imgs, args.out_dir, args.model_path, use_decoder=False)
+    deploy(imgs, args.out_dir, args.model_path, use_decoder=True)
 
 if __name__ == '__main__':
     tf.app.run()

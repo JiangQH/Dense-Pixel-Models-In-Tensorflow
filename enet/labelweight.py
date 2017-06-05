@@ -22,8 +22,8 @@ def compute_lable_weight():
                 #plt.imshow(data)
                 uniques, counts = np.unique(data, return_counts=True)
                 for i in range(len(uniques)):
-                    #if uniques[i] == 19:
-                    #    continue
+                    if uniques[i] == 19:
+                        continue
                     if uniques[i] not in fres:
                         fres[uniques[i]] = 0
                     fres[uniques[i]] += counts[i]

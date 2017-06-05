@@ -4,7 +4,7 @@ from tensorflow.python.framework import ops
 
 import numbers
 
-def _get_weights_initializer(shape, type='xavier', uniform=True):
+def _get_weights_initializer(shape, type='xavier', uniform=True, variance_norm='ave'):
     """
     get the weight stddev by the kernel shape
     :param shape:
@@ -22,13 +22,29 @@ def _get_weights_initializer(shape, type='xavier', uniform=True):
             receiptive *= dim
         fan_in = receiptive * shape[-2]
         fan_out = receiptive * shape[-1]
-    scale = 1.0 / tf.maximum(1.0, (fan_in + fan_out) / 3.0)
-    if uniform:
-        init_range = tf.sqrt(scale * 2.0)
-        return tf.random_uniform_initializer(-init_range, init_range)
+
+    if variance_norm == 'fan_in':
+        scale = 1.0 / tf.maximum(1.0, fan_in)
+    elif variance_norm == 'fan_out':
+        scale = 1.0 / tf.maximum(1.0, fan_out)
     else:
-        stddev = tf.sqrt(scale)
+        scale = 1.0 / tf.maximum(1.0, (fan_in + fan_out) / 2.0)
+
+    if type == 'xavier':
+        if uniform:
+            init_range = tf.sqrt(scale * 3.0)
+            return tf.random_uniform_initializer(-init_range, init_range)
+        else:
+            stddev = tf.sqrt(scale)
+            return tf.truncated_normal_initializer(stddev)
+
+    elif type == 'msra':
+        stddev = tf.sqrt(scale * 2.0)
         return tf.truncated_normal_initializer(stddev)
+
+    else:
+        raise Exception('not recognized init type')
+
 
 def _get_variable(name, shape, initializer):
     var = tf.get_variable(name, shape, initializer=initializer, dtype=tf.float32)
@@ -44,8 +60,8 @@ def _weights_with_weight_decay(name, shape, wd, w_initializer):
     else:
         raise Exception('weight initializer must be str or number')
     """
-    if w_initializer == 'xavier':
-        initializer = _get_weights_initializer(shape, w_initializer)
+    if isinstance(w_initializer, basestring):
+        initializer = _get_weights_initializer(shape, type=w_initializer, uniform=True)
     else:
         initializer = w_initializer
 

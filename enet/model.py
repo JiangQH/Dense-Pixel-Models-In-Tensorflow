@@ -133,35 +133,37 @@ def _initial_block(name, inputs, input_channels=3, output_channel=13, kerne=3, s
 
 def build_encoder(images, is_training, num_classes=None):
     # the init block
-    # norm_weight_init = tf.truncated_normal_initializer(0.001)
-    norm_weight_init = 'xavier'
-    encode = _initial_block('initial', images, weight_init=norm_weight_init)
+    small_xavier_init = 'xavier_scale2'
+    xavier_init = 'xavier'
+    msra_init = 'msra_scale2'
+    encode = _initial_block('initial', images, weight_init=xavier_init)
     # the bottleneck 1.0
     encode = _bottleneck_encoder('bottleneck1.0', is_training, encode, 16, 64,
-                                 downsample=True, dropout_ratio=0.01, weight_init=norm_weight_init)
+                                 downsample=True, dropout_ratio=0.01, weight_init=xavier_init)
     # the bottleneck 1.1-1.4
     for i in range(4):
         encode = _bottleneck_encoder('bottleneck1.{}'.format(i+1), is_training, encode, 64, 64,
-                                     dropout_ratio=0.01, weight_init=norm_weight_init)
+                                     dropout_ratio=0.01, weight_init=xavier_init)
     # the bottleneck2.0
     encode = _bottleneck_encoder('bottleneck2.0', is_training, encode, 64, 128,
-                                 downsample=True, weight_init=norm_weight_init)
+                                 downsample=True, weight_init=xavier_init)
 
     # the bottleneck2.1-2.8, 3.1-3.8
     for i in range(2):
-        encode = _bottleneck_encoder('bottleneck{}.1'.format(i+2), is_training, encode, 128, 128, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.2'.format(i+2), is_training, encode, 128, 128, dilated=2, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.3'.format(i+2), is_training, encode, 128, 128, asy=5, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.4'.format(i+2), is_training, encode, 128, 128, dilated=4, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.5'.format(i+2), is_training, encode, 128, 128, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.6'.format(i+2), is_training, encode, 128, 128, dilated=8, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.7'.format(i+2), is_training, encode, 128, 128, asy=5, weight_init=norm_weight_init)
-        encode = _bottleneck_encoder('bottleneck{}.8'.format(i+2), is_training, encode, 128, 128, dilated=16, weight_init=norm_weight_init)
+        encode = _bottleneck_encoder('bottleneck{}.1'.format(i+2), is_training, encode, 128, 128, weight_init=xavier_init)
+        encode = _bottleneck_encoder('bottleneck{}.2'.format(i+2), is_training, encode, 128, 128, dilated=2, weight_init=xavier_init)
+        encode = _bottleneck_encoder('bottleneck{}.3'.format(i+2), is_training, encode, 128, 128, asy=5, weight_init=xavier_init)
+        encode = _bottleneck_encoder('bottleneck{}.4'.format(i+2), is_training, encode, 128, 128, dilated=4, weight_init=xavier_init)
+        encode = _bottleneck_encoder('bottleneck{}.5'.format(i+2), is_training, encode, 128, 128, weight_init=xavier_init)
+        encode = _bottleneck_encoder('bottleneck{}.6'.format(i+2), is_training, encode, 128, 128, dilated=8, weight_init=xavier_init)
+        encode = _bottleneck_encoder('bottleneck{}.7'.format(i+2), is_training, encode, 128, 128, asy=5, weight_init=xavier_init )
+        encode = _bottleneck_encoder('bottleneck{}.8'.format(i+2), is_training, encode, 128, 128, dilated=16, weight_init=xavier_init)
 
     if num_classes is not None:
         # train the encoder first
-        encode = conv2d('prediction', encode, 128, num_classes, 1, 1, bias_var=0.1, wd=0, weight_initializer=norm_weight_init)
-        encode = norm(encode)
+        encode = conv2d('prediction', encode, 128, num_classes, 1, 1, bias_var=0.1, wd=0, weight_initializer=small_xavier_init if num_classes == 3 else xavier_init)
+        if num_classes == 3:
+            encode = norm(encode)
 
     return encode
 
@@ -169,15 +171,17 @@ def build_encoder(images, is_training, num_classes=None):
 def build_decoder(encoder, is_training=True, num_classes=20):
     # upsamle model
     # norm_weight_init = tf.truncated_normal_initializer(0.001)
-    norm_weight_init = 'xavier'
-    decode = _bottleneck_decoder('bottleneck4.0', is_training, encoder, 128, 64, upsample=True, reverse_module=True, weight_init=norm_weight_init)
-    decode = _bottleneck_decoder('bottleneck4.1', is_training, decode, 64, 64, weight_init=norm_weight_init)
-    decode = _bottleneck_decoder('bottleneck4.2', is_training, decode, 64, 64, weight_init=norm_weight_init)
-    decode = _bottleneck_decoder('bottleneck5.0', is_training, decode, 64, 16, upsample=True, reverse_module=True, weight_init=norm_weight_init)
-    decode = _bottleneck_decoder('bottleneck5.1', is_training, decode, 16, 16, weight_init=norm_weight_init)
+    xavier_init = 'xavier'
+    small_xavier_init = 'xavier_scale2'
+    decode = _bottleneck_decoder('bottleneck4.0', is_training, encoder, 128, 64, upsample=True, reverse_module=True, weight_init=xavier_init)
+    decode = _bottleneck_decoder('bottleneck4.1', is_training, decode, 64, 64, weight_init=xavier_init)
+    decode = _bottleneck_decoder('bottleneck4.2', is_training, decode, 64, 64, weight_init=xavier_init)
+    decode = _bottleneck_decoder('bottleneck5.0', is_training, decode, 64, 16, upsample=True, reverse_module=True, weight_init=xavier_init)
+    decode = _bottleneck_decoder('bottleneck5.1', is_training, decode, 16, 16, weight_init=xavier_init)
     # the output
-    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=2e-4, weight_initializer=norm_weight_init)
-
+    out = deconv('prediction', decode, 16, num_classes, 2, 2, bias_var=None, wd=2e-4, weight_initializer=xavier_init)
+    if num_classes == 3:
+        out = norm(out)
     return out
 
 
