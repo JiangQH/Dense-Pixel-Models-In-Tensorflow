@@ -273,6 +273,14 @@ def prelu(name, inputs, alpha_init=0.0):
 
         return relu(inputs) + tf.multiply(alpha, (inputs - tf.abs(inputs))) * 0.5
 
+def elu(name, inputs, alpha_init=1.0):
+    with tf.variable_scope(name) as scope:
+        alpha = _get_variable('alpha', inputs.get_shape()[-1], initializer=tf.constant_initializer(alpha_init))
+
+        return tf.nn.elu(inputs) + tf.multiply(alpha, (inputs - tf.abs(inputs))) * 0.5
+
+
+
 
 
 
