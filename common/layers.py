@@ -120,13 +120,16 @@ def spatial_dropout(inputs, is_training, dropout_rate):
     """
     # get a noise mask to do the dropout job, get the mask shape
     def with_training():
-        channel_num = inputs.get_shape().as_list()[-1]
-        bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform([channel_num]), dropout_rate))
-        # mask it to the whole channel feature map, broadcasting used
-        output = tf.multiply(inputs, bernoulli_mask)
-        keep_ratio = 1 - dropout_rate
-        # rescale the input to let the val unchanged
-        output = tf.divide(output, keep_ratio)
+        if dropout_rate > 0:
+            channel_num = inputs.get_shape().as_list()[-1]
+            bernoulli_mask = tf.ceil(tf.subtract(tf.random_uniform([channel_num]), dropout_rate))
+            # mask it to the whole channel feature map, broadcasting used
+            output = tf.multiply(inputs, bernoulli_mask)
+            keep_ratio = 1 - dropout_rate
+            # rescale the input to let the val unchanged
+            output = tf.divide(output, keep_ratio)
+        else:
+            output = inputs
         return output
 
     output = tf.cond(is_training,

@@ -16,10 +16,11 @@ def compute_euclidean_loss(pre, gt, invalid_label=0.0):
 def compute_dot_loss(pre, gt, invalid_label=0.0):
     mask = compute_mask(gt, invalid_value=invalid_label)
     # gt = tf.multiply(tf.add(tf.divide(gt, 255.0), 0.5), 2.0)
-    gt_masked = tf.multiply(gt, mask)
-    dots = tf.reduce_sum(tf.multiply(pre, gt_masked))
+    multiplied = tf.multiply(pre, gt)
+    masked_mult = tf.multiply(multiplied, mask)
+    total_loss = tf.reduce_sum(masked_mult)
     total_count = tf.reduce_sum(mask)
-    loss = tf.multiply(tf.divide(dots, total_count), -1)
+    loss = tf.multiply(tf.divide(total_loss, total_count), -1)
     tf.add_to_collection('losses', loss)
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 

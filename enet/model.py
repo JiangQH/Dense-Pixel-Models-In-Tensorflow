@@ -18,7 +18,7 @@ def _prelu_bn(name, is_training, inputs, alpha_init=0.0, decay=0.99):
 
 
 def _bottleneck_encoder(name, is_training, inputs, input_channels, output_channels, internal_scale=4, asy=0, dilated=0,
-                downsample=False, dropout_ratio=0.1, bn_decay=0.99, wd=2e-4, weight_init='xavier'):
+                downsample=False, dropout_ratio=0.01, bn_decay=0.99, wd=2e-4, weight_init='xavier'):
     """
     :param name: 
     :param inputs: 
@@ -139,14 +139,14 @@ def build_encoder(images, is_training, num_classes=None):
     encode = _initial_block('initial', images, weight_init=xavier_init)
     # the bottleneck 1.0
     encode = _bottleneck_encoder('bottleneck1.0', is_training, encode, 16, 64,
-                                 downsample=True, dropout_ratio=0.01, weight_init=xavier_init)
+                                 downsample=True, dropout_ratio=0, weight_init=xavier_init)
     # the bottleneck 1.1-1.4
     for i in range(4):
         encode = _bottleneck_encoder('bottleneck1.{}'.format(i+1), is_training, encode, 64, 64,
-                                     dropout_ratio=0.01, weight_init=xavier_init)
+                                     dropout_ratio=0, weight_init=xavier_init)
     # the bottleneck2.0
     encode = _bottleneck_encoder('bottleneck2.0', is_training, encode, 64, 128,
-                                 downsample=True, weight_init=xavier_init)
+                                 downsample=True, dropout_ratio=0, weight_init=xavier_init)
 
     # the bottleneck2.1-2.8, 3.1-3.8
     for i in range(2):

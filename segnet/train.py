@@ -8,7 +8,7 @@ sys.path.append(path)
 from model import Model
 from common.dataset import BathLoader
 from common.loss import compute_dot_loss, compute_euclidean_loss, compute_accuracy, compute_cross_entropy, compute_cross_entropy_with_weight
-from common.util import load_config
+from common.util import load_config, uniform_normal
 import tensorflow as tf
 import time
 import numpy as np
@@ -30,14 +30,13 @@ def solve(config):
         is_training = tf.placeholder(dtype=tf.bool, name='is_training')
         data_loader = BathLoader(config)
         # infere the output
-        predictions = Model(config).inference(images, is_training)
+        predictions = Model(config).inference(images, is_training, num_classes=config.num_classes, weight_decay=config.weight_decay)
 
         # the loss, different for different task
-        #loss = compute_euclidean_loss(predictions, labels)
-        #loss = compute_dot_loss(predictions, labels)
-        #loss = compute_cross_entropy(predictions, labels, config.invalid_label)
-        loss = compute_cross_entropy_with_weight(predictions, labels, config.label_probs, config.invalid_label, config.c)
-        accuracy = compute_accuracy(predictions, labels, config.invalid_label)
+        loss = compute_euclidean_loss(predictions, labels, invalid_label=config.invalid_label)
+        #loss = compute_dot_loss(predictions, labels, invalid_label=config.invalid_label)
+
+        #accuracy = compute_accuracy(predictions, labels, config.invalid_label)
         # train op, use the sgd with momentum
         global_step = tf.Variable(0, name='global_step', trainable=False)
         train_op = tf.train.AdamOptimizer(learning_rate=config.lr).minimize(loss, global_step=global_step)
@@ -60,70 +59,63 @@ def solve(config):
             print 'begin training now....'
             train_losses = []
             val_losses = []
-            accuracies = []
-            train_accuracies = []
             start_time = time.time()
             local_time = time.time()
             for step in xrange(MAX_ITER+1):
                 imgs, gts = data_loader.next_train_batch()
+                gts = uniform_normal(gts)
                 train_feed_dict = {images: imgs, labels: gts, is_training: True}
-                _, loss_train, train_accu = sess.run([train_op, loss, accuracy], feed_dict=train_feed_dict)
+                _, loss_train = sess.run([train_op, loss], feed_dict=train_feed_dict)
                 if step % config.display == 0 or step == MAX_ITER:
-                    print '{}[iterations], time consumes {}, train loss {}, train accuracy {}'.format(step,
-                                                                                                    time.time() - local_time,
-                                                                                                    loss_train, train_accu
-                                                                                                    )
+                    print '{}[iterations], time consumes {}, train loss {}'.format(step,
+                                                                                  time.time() - local_time,
+                                                                                  loss_train
+                                                                                    )
                     local_time = time.time()
                 assert not np.isnan(loss_train), 'model with loss nan'
                 train_losses.append(loss_train)
-                train_accuracies.append(train_accu)
+
 
 
                 if hasattr(config, 'test_source') and (step % config.test_iter == 0 or step == MAX_ITER):
                     print '.............testing model..............'
                     imgs, gts = data_loader.next_val_batch()
+                    gts = uniform_normal(gts)
                     val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                    loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
+                    loss_val= sess.run([loss], feed_dict=val_feed_dict)
                     val_losses.append(loss_val)
-                    accuracies.append(val_accu)
-                    print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
+                    print '{}[iterations], val loss {}'.format(step, loss_val)
 
                 if step != 0 and (step % config.snapshot == 0 or step == MAX_ITER):
                     print '..............snapshot model.............'
                     if hasattr(config, 'test_source'):
                         imgs, gts = data_loader.next_val_batch()
+                        gts = uniform_normal(gts)
                         val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                        loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
+                        loss_val = sess.run([loss], feed_dict=val_feed_dict)
                         val_losses.append(loss_val)
-                        accuracies.append(val_accu)
-                        print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
+                        print '{}[iterations], val loss {}'.format(step, loss_val)
                     saver.save(sess, osp.join(config.model_dir, 'segnet_model.ckpt'), global_step=global_step)
 
                 # should we stop now ? can add accuracy support later
                 if data_loader.get_epoch() == config.max_epoch + 1:
                     if hasattr(config, 'test_source'):
                         imgs, gts = data_loader.next_val_batch()
+                        gts = uniform_normal(gts)
                         val_feed_dict = {images: imgs, labels: gts, is_training: True}
-                        loss_val, val_accu = sess.run([loss, accuracy], feed_dict=val_feed_dict)
+                        loss_val = sess.run([loss], feed_dict=val_feed_dict)
                         val_losses.append(loss_val)
-                        accuracies.append(val_accu)
-                        print '{}[iterations], val loss {}, val accuracy {}'.format(step, loss_val, val_accu)
+                        print '{}[iterations], val loss {}'.format(step, loss_val)
                     saver.save(sess, osp.join(config.model_dir, 'segnet_model.ckpt'), global_step=global_step)
                     break
 
             print 'total time comsums {}'.format(time.time() - start_time)
-            with open('train_loss_log.txt', 'wb') as f:
+            with open(osp.join(config.model_dir, 'train_loss_log.txt'), 'wb') as f:
                 pickle.dump(train_losses, f)
                 f.close()
-            with open('train_accu_log.txt', 'wb') as f:
-                pickle.dump(train_accuracies, f)
-                f.close()
             if hasattr(config, 'test_source'):
-                with open('val_loss_log.txt', 'wb') as f:
+                with open(osp.join(config.model_dir, 'val_loss_log.txt'), 'wb') as f:
                     pickle.dump(val_losses, f)
-                    f.close()
-                with open('val_accu_log.txt', 'wb') as f:
-                    pickle.dump(accuracies, f)
                     f.close()
             sess.close()
 

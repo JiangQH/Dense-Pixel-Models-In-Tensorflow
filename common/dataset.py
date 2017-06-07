@@ -27,7 +27,6 @@ class BathLoader(object):
         self.val_list = [line.rstrip('\n') for line in open(self.test_source)] if self.test_source is not None else None
 
         shuffle(self.train_list)
-        shuffle(self.val_list)
         if self.test_source is not None:
             shuffle(self.val_list)
         self.image_size = config.image_size

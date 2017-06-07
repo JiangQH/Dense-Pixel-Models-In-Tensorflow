@@ -23,7 +23,7 @@ class Model(object):
             self.config = None
             self.loaded = False
 
-    def inference(self, images, is_training, num_classes=20, weight_decay=0.0001):
+    def inference(self, images, is_training, num_classes=3, weight_decay=0.0001):
 
         # the encoder structure as vgg16, loading the pre-trained model we should
         conv1_1 = conv_block('conv1_1', is_training, images, 3, 64, bias_var=self.data_dict['conv1_1'][1] if self.loaded else 0.1,
@@ -112,6 +112,6 @@ class Model(object):
         up1b = conv_block('up1', is_training, up1, 64, 64, bias_var=0.1, wd=weight_decay)
         out = conv2d(name='out', inputs=up1b, input_channels=64,
                      output_channels=num_classes, kernel=3, stride=1, bias_var=0.1, wd=weight_decay)
-        #out_norm = norm(out)
-        return out
+        out_norm = norm(out)
+        return out_norm
 

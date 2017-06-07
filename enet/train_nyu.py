@@ -53,8 +53,8 @@ def solve(config):
                 encoder_params[name] = var
 
 
-        loss = compute_euclidean_loss(out, labels, config.invalid_label)
-
+        #loss = compute_euclidean_loss(out, labels, config.invalid_label)
+        loss = compute_dot_loss(out, labels, config.invalid_label)
         global_step = tf.Variable(0, name='global_step', trainable=False)
         train_op = tf.train.AdamOptimizer(learning_rate=config.lr).minimize(loss, global_step=global_step)
 
@@ -145,11 +145,11 @@ def solve(config):
 
 
             print 'total time comsums {}'.format(time.time() - start_time)
-            with open('train_loss_nyu.txt', 'wb') as f:
+            with open(osp.join(config.model_dir, 'train_loss_nyu.txt'), 'wb') as f:
                 pickle.dump(train_losses, f)
                 f.close()
             if hasattr(config, 'test_source'):
-                with open('val_loss_nyu.txt', 'wb') as f:
+                with open(osp.join(config.model_dir, 'val_loss_nyu.txt'), 'wb') as f:
                     pickle.dump(val_losses, f)
                     f.close()
             sess.close()

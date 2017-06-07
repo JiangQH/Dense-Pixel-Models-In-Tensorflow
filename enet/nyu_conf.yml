@@ -1,18 +1,18 @@
 ## config for training
 source: ../data/train_nyu.csv  # training file
 test_source: ../data/val_nyu.csv # val file
-model_dir: ./nyu_model
+model_dir: ./nyu_model_v6
 
 
 # training params
 batch_size: 8  # batch_size
 test_batch: 8
-lr: 0.001
+lr: 0.0005
 max_epoch: 100
 test_iter: 50
 mirror: True
 snapshot: 5000
-weight_decay: 0.0002
+weight_decay: 0
 train_decoder: True
 invalid_label: 0.0
 #c: 1.02
